@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "title": "Secrets",
+    "description": "Scoped secret variables. Values never enter prompts or logs; shell commands use them as $DSH_SECRET_<NAME>."
+  },
+  "panel": {
+    "title": "Secrets"
+  },
+  "view": {
+    "title": "Secrets"
+  },
+  "scope": {
+    "global": "Global",
+    "workspace": "This project",
+    "session": "This session"
+  },
+  "source": {
+    "global": "Global",
+    "workspace": "Project",
+    "session": "Session",
+    "auto": "Auto"
+  },
+  "state": {
+    "set": "Value saved",
+    "unset": "No value",
+    "enabled": "On",
+    "disabled": "Off"
+  },
+  "action": {
+    "add": "Add variable",
+    "addGlobal": "Add global variable",
+    "addWorkspace": "Add project variable",
+    "addSession": "Add session variable",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "setValue": "Set value",
+    "replaceValue": "Replace value",
+    "clearValue": "Clear value",
+    "refresh": "Refresh",
+    "open": "Open sensitive information"
+  },
+  "field": {
+    "name": "Name",
+    "value": "Value",
+    "description": "Description (optional)",
+    "nameHint": "Uppercase letters, digits and underscore, for example OPENAI_API_KEY.",
+    "valueHint": "Stored in the Host credential store. It is never shown again.",
+    "availability": "Availability",
+    "availabilityAll": "All projects",
+    "availabilitySome": "Selected projects only",
+    "enabled": "Enable after adding"
+  },
+  "empty": {
+    "globals": "No global variables yet.",
+    "workspace": "No variables in this project yet.",
+    "session": "No variables in this session yet.",
+    "enabled": "No variable is enabled in this session."
+  },
+  "notice": {
+    "valuesNeverShown": "Values are stored by the Host and never shown. Shell commands use them as $DSH_SECRET_<NAME>.",
+    "unavailableInShell": "Only one-shot bash and pwsh commands receive these variables.",
+    "saved": "Saved",
+    "failed": "Operation failed"
+  },
+  "count": {
+    "enabled": "{{enabled}} / {{total}} enabled"
+  },
+  "group": {
+    "session": "Session variables",
+    "workspace": "Project variables",
+    "global": "Global variables",
+    "auto": "Auto-detected"
+  }
+}

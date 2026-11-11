@@ -1,0 +1,44 @@
+name: Bug report
+description: Something broke in the Secrets panel, the shell injection, or the API
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste real secret values. Replace them with something like `sk-test-redacted`.
+  - type: input
+    id: dsh
+    attributes:
+      label: DSH version
+      placeholder: 0.2.2-rc.1
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where did it happen?
+      options:
+        - Global page
+        - Project dialog
+        - Session tab
+        - Shell injection ($DSH_SECRET_*)
+        - Auto-detection
+        - REST API
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened?
+      description: Steps to reproduce, expected result, actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Remove secrets, tokens, and personal paths first.
+    validations:
+      required: false

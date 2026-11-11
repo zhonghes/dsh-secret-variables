@@ -1,0 +1,3 @@
+- insert:
+    - id: secret-variables
+      name: '@local/dsh-secret-variables'

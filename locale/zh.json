@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "title": "密钥管理",
+    "description": "按作用域启用的密钥变量。值不会进入提示词或日志，shell 命令通过 $DSH_SECRET_<NAME> 使用它们。"
+  },
+  "panel": {
+    "title": "密钥管理"
+  },
+  "view": {
+    "title": "密钥管理"
+  },
+  "scope": {
+    "global": "全局",
+    "workspace": "本项目",
+    "session": "本会话"
+  },
+  "source": {
+    "global": "全局",
+    "workspace": "项目",
+    "session": "会话",
+    "auto": "自动"
+  },
+  "state": {
+    "set": "已设置",
+    "unset": "未设置",
+    "enabled": "已启用",
+    "disabled": "已关闭"
+  },
+  "action": {
+    "add": "新增变量",
+    "addGlobal": "新增全局变量",
+    "addWorkspace": "新增项目变量",
+    "addSession": "新增会话变量",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "close": "关闭",
+    "setValue": "设置值",
+    "replaceValue": "更换值",
+    "clearValue": "清除值",
+    "refresh": "刷新",
+    "open": "打开敏感信息"
+  },
+  "field": {
+    "name": "名称",
+    "value": "值",
+    "description": "说明（可选）",
+    "nameHint": "大写字母、数字和下划线，例如 OPENAI_API_KEY。",
+    "valueHint": "保存在 Host 凭据库中，之后不再显示。",
+    "availability": "生效范围",
+    "availabilityAll": "全部项目",
+    "availabilitySome": "仅指定项目",
+    "enabled": "创建后启用"
+  },
+  "empty": {
+    "globals": "还没有全局变量。",
+    "workspace": "这个项目还没有变量。",
+    "session": "这个会话还没有变量。",
+    "enabled": "本会话没有启用任何变量。"
+  },
+  "notice": {
+    "valuesNeverShown": "值由 Host 保存且不会显示；shell 命令中以 $DSH_SECRET_<NAME> 引用。",
+    "unavailableInShell": "只有一次性的 bash 与 pwsh 命令会收到这些变量。",
+    "saved": "已保存",
+    "failed": "操作失败"
+  },
+  "count": {
+    "enabled": "已启用 {{enabled}} / {{total}}"
+  },
+  "group": {
+    "session": "本会话变量",
+    "workspace": "本项目变量",
+    "global": "全局变量",
+    "auto": "自动检测"
+  }
+}
