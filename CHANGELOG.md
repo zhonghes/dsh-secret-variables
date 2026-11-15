@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — 2026
+
+- Short values (below 12 characters) now open a save-time dialog that explains the
+  risk; values of 4 or more characters can opt into forced redaction.
+- New `forceRedact` metadata for global, project and session variables, plus the
+  `setForceRedact` API; forced values are masked down to 4 characters.
+- The state column shows a masking badge: output auto / output forced / output none. The edit
+  row carries a checkbox to switch forced redaction on or off; values shorter than
+  4 characters are told that forced redaction cannot match them.
+- The project dialog now uses the same 960px content column as the global and session pages.
+- 115 tests, no runtime dependencies.
+
 ## 0.1.0 — 2026
 
 First public release.

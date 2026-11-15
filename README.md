@@ -4,90 +4,70 @@
 
 DeepSeek Harness 插件：让密钥不出现在模型的上下文里。
 
-你只声明一次变量，模型看到的永远是 `$DSH_SECRET_<NAME>`，真值在执行一次性 `bash` / `pwsh` 命令时才被注入环境变量。值不会进入提示词、工具结果、会话日志，也不进插件自己的元数据存储。
+你只声明一次变量，模型看到的永远是 `$DSH_SECRET_<NAME>`，真值只在执行一次性 `bash` / `pwsh` 命令时被注入环境变量。值默认不会进入提示词、工具结果、会话日志，也不进插件自己的元数据存储——这个默认以 12 字符为替换下限，更短的值见下面「脱敏」一条。
 
-```
-   你设置值                    Host 保存                    模型看到
-   ─────────                   ─────────                    ────────
-   OPENAI_API_KEY=sk-…  ──►    凭据存储（0600）  ──►        $DSH_SECRET_OPENAI_API_KEY
-                                    │
-                                    ▼
-                          执行命令时的 bash/pwsh 环境
-```
+<a href="docs/images/flow.png"><img src="docs/images/flow.png" width="860" alt="示意图：值从输入保存到 Host 凭据存储，模型只看到引用；执行一次性 bash/pwsh 时才注入真值"></a>
 
 ## 能做什么
 
 - **四个作用域**：全局（全部项目或指定项目）、项目、会话，以及从对话里自动识别的密钥。
 - **每行一个开关**：某个全局密钥只在本项目 / 本会话启用，不用改值。
 - **值对界面只写不读**：输入后由 Host 凭据接口保存，之后不再显示。
-- **脱敏**：工具输出与历史里出现的已知值会替换成引用（短于 12 字符的值仍会注入，但不参与文本替换）。
+- **脱敏**：工具输出与历史里出现的已知值会替换成引用（短于 12 字符的值仍会注入，默认不参与文本替换；保存这类值时会弹窗提示，可开启「强制脱敏」按 ≥4 字符参与输出替换，注入始终不受影响）。
 - **守卫**：常驻终端等不注入值的 shell 里使用引用会被明确拒绝，而不是悄悄展开成空串。
 
 ## 界面入口
 
-```
-入口在哪
-├─ 侧栏 → 🔑 密钥管理                全局作用域
-├─ 工作区行 ⋯ → 密钥管理             本项目
-└─ 会话标签行 → 密钥管理             本会话
-```
+<a href="docs/images/entry.png"><img src="docs/images/entry.png" width="860" alt="示意图：同一界面上的三个入口——侧栏「密钥管理」、工作区行「⋯」菜单、会话标签页，分别对应全局、本项目、本会话"></a>
+
+三处打开的是同一套面板，作用域不同：侧栏改全局，工作区行管本项目，会话标签只作用于当前会话。侧栏入口在「自动化任务」下方。
+
+以下配图都是示意图，变量名与数值仅用于展示。
 
 ### 全局页
 
-```
-全局页
-├─ 添加行：名称 · 值 · 生效范围 · ☐ 创建后启用 · 添加
-└─ 变量行，一行一条：
-   ├─ OPENAI_API_KEY  $DSH_SECRET_OPENAI_API_KEY  全部项目 · 已设置 · ● · 更换值 · ✕
-   └─ GITHUB_TOKEN    $DSH_SECRET_GITHUB_TOKEN     dsh、tmp · 已设置 · ● · 更换值 · ✕
-```
+<a href="docs/images/global.png"><img src="docs/images/global.png" width="860" alt="示意图：全局页，标题右侧是已启用数量，下面是添加行与变量列表"></a>
+
+标题右侧是「已启用 x / y」。添加行依次是名称、值、生效范围、「创建后启用」和「添加」；「创建后启用」默认不勾选，项目页和会话页的同类开关默认勾选。
 
 一行从左到右：
 
 | 部分 | 显示什么 | 例子 |
 | --- | --- | --- |
 | 名称 / 环境变量 | 模型看到的引用 | `OPENAI_API_KEY` · `$DSH_SECRET_OPENAI_API_KEY` |
-| 生效范围 | 在哪里可用 | `全部项目` / `dsh、tmp` |
-| 状态 | 值是否已设置 | `已设置` |
-| 开关 | 在该作用域是否启用 | ● |
+| 范围 / 来源 | 全局页显示生效范围，项目页与会话页显示来源 | `全部项目` / `dsh、tmp` / `项目` / `全局` / `自动` |
+| 状态 | 已设置并满足脱敏条件时显示脱敏徽标，否则显示 `未设置` | `输出自动脱敏` / `输出强制脱敏` / `输出未脱敏` |
+| 开关 | 在该作用域是否启用（自动检测行不可切换） | ● |
 | 操作 | 更换值、删除 | `更换值` · `✕` |
 
 生效范围是下拉：默认 **全部项目**，每个项目一个勾选项；勾项目自动取消「全部项目」，取消最后一个自动回退到它。同一作用域重名会被拒绝，不同作用域同名是覆盖机制。
 
-名称用大写字母、数字和下划线（`SERVICE_PURPOSE` 形式，例如 `OPENAI_API_KEY`）；环境变量名会自动加 `DSH_SECRET_` 前缀，含非拉丁字符的名称会取稳定哈希作为后缀。
+名称会自动归一化：转大写、非字母数字转下划线、去掉首尾下划线、最长 40 字符——`openai-api-key` 与 `OPENAI_API_KEY` 都会得到 `OPENAI_API_KEY`；纯非拉丁文字的名称落为 `SECRET_<8 位哈希>`。环境变量名在前面加 `DSH_SECRET_`。重名按归一化结果判断，所以 `a`、`A`、`a!` 视为同名。
+
+行内徽标（在「状态」列）：`输出自动脱敏` = 值长度 ≥12，输出里自动替换（绿色）；`输出强制脱敏` = 变量开了强制脱敏且值 ≥4（黄色）；`输出未脱敏` = 值太短，<12 或强制时 <4（红色）。注入始终不受影响。值未设置时这一列显示 `未设置`；`已设置` 只出现在自动检测行——这些条目没有元数据行，界面只能确认值在本次进程内存里。
 
 ### 项目页（工作区行「⋯」→ 密钥管理）
 
-```
-密钥管理 · 项目
-├─ 本项目变量 1 —— 本项目内共享
-│  └─ DATABASE_URL · $DSH_SECRET_DATABASE_URL · 已设置 · ● · 更换值 · ✕
-└─ 全局变量 1 —— 所有项目可用，改值请到全局页
-   └─ OPENAI_API_KEY · $DSH_SECRET_OPENAI_API_KEY · 已设置 · ● · 请在所属页修改
-```
+<a href="docs/images/project.png"><img src="docs/images/project.png" width="860" alt="示意图：项目弹窗，标题下方显示项目名，分「本项目变量」与「全局变量」两组"></a>
+
+弹窗标题下方显示项目名。本项目变量可直接改值、删除；全局变量只显示开关和「请在所属页修改」。
 
 ### 会话页（对话 | 轨迹 | 密钥管理）
 
-```
-密钥管理 · 本会话
-├─ 本会话变量 1 —— 仅本会话可用
-│  └─ SENTRY_AUTH_TOKEN · $DSH_SECRET_SENTRY_AUTH_TOKEN · 已设置 · ● · 更换值 · ✕
-├─ 本项目变量 1 —— 本项目内共享
-│  └─ DATABASE_URL · $DSH_SECRET_DATABASE_URL · 已设置 · ● · 请在所属页修改
-├─ 全局变量 1 —— 所有项目可用
-│  └─ OPENAI_API_KEY · $DSH_SECRET_OPENAI_API_KEY · 已设置 · ● · 请在所属页修改
-└─ 自动检测 1 —— 从对话中识别，仅本次会话
-   └─ AUTO_1 · $DSH_SECRET_AUTO_1 · 已设置 · ● · 自动
-```
+<a href="docs/images/session.png"><img src="docs/images/session.png" width="860" alt="示意图：会话页的密钥管理标签页，包含本会话、本项目、全局与自动检测四个分组"></a>
+
+分组依次是「本会话变量 / 本项目变量 / 全局变量 / 自动检测」，标题右侧带数量和一句说明；没有内容的分组不显示，「自动检测」例外——无命中时会显示触发条件提示。「自动检测」里的 `AUTO_n` 就是从对话里识别出来、只存在本次会话内存里的兜底变量。
+
+添加行下方还有「只看已启用」过滤，只列出本会话里开着的变量。
 
 ## 安装（源码）
 
 需要 DSH **>= 0.2.2-rc.1**、Node **>= 20**。只发源码，未发布到 npm。
 
-包内自带 bundle patch（`dsh.bundle.patch`），按 bundle 装进 profile：
+`package.json` 的 `dsh.bundle.patch` 指向包内的 `cordis.patch.yml`。克隆本仓库，按 bundle 装进 profile：
 
 ```sh
-dsh plugin --profile web add <本仓库地址>
+dsh plugin --profile web add /path/to/dsh-secret-variables
 ```
 
 重启 DSH，确认插件管理器里 `@local/dsh-secret-variables` 已启用（直接在插件管理器里安装 bundle 效果相同），侧栏就会出现「密钥管理」。
@@ -100,7 +80,31 @@ dsh plugin --profile web add <本仓库地址>
 curl -s -H "Authorization: Bearer $DSH_SECRET_OPENAI_API_KEY" https://api.example.com/
 ```
 
-未登记的密钥出现在对话里时，会被自动转成 `$DSH_SECRET_AUTO_n` 并列在「自动检测」下（仅本次会话，不落盘）。
+## 自动检测（兜底）
+
+未登记的密钥在下面三类文本里出现时会被扫描：工具结果、PTC 调度日志、以及进入模型前的消息（包括你发的消息）。命中后替换成 `$DSH_SECRET_AUTO_n`，列在会话页「自动检测」下。
+
+它只按**已知凭证格式**匹配，不做长度或熵值猜测：
+
+| 格式 | 例子 |
+| --- | --- |
+| PEM 私钥 | `-----BEGIN … PRIVATE KEY-----` |
+| URL 内嵌密码 | `postgres://user:pass@host` |
+| OpenAI 风格 key | `sk-…`（`sk-` 后至少 20 位且整体含数字） |
+| Google API key | `AIza…` |
+| GitHub token / PAT | `ghp_…` / `github_pat_…` |
+| GitLab / npm / HuggingFace | `glpat-…` / `npm_…` / `hf_…` |
+| AWS / 阿里云 / 腾讯云 | `AKIA…` / `LTAI…` / `AKID…` |
+| Slack / Stripe / Webhook | `xoxb-…` / `sk_live_…` / `whsec_…` |
+| JWT | `eyJ….eyJ….…` |
+
+命中后：
+
+- 每个会话默认最多 16 条（插件配置 `maxAuto` 可设为 1–64）；达到上限后新出现的格式串原样保留，不再替换。
+- 只存进程内存：会话销毁或插件重载即消失，不落盘、不写凭据文件。
+- 只在一次性的 `bash` / `pwsh` 里注入。没有命中时「自动检测」块也常显，并说明触发条件。
+
+**不会识别**：不属于上表的裸串。例如 `Authorization: Bearer <随机串>` 里那段字符没有前缀或结构特征，不会被自动收编，被命令打印出来时也不会被替换。这类值请手动登记——在会话页添加会话变量，值粘贴进去，之后用 `$DSH_SECRET_<名称>` 引用。
 
 ## 作用域与优先级
 
@@ -108,14 +112,14 @@ curl -s -H "Authorization: Bearer $DSH_SECRET_OPENAI_API_KEY" https://api.exampl
 | --- | --- | --- |
 | 全局 | 侧栏「密钥管理」 | 删除前一直有效，落盘 |
 | 项目 | 工作区行「⋯」 | 删除前一直有效，落盘 |
-| 会话 | 会话标签页 | 会话销毁为止，落盘 |
-| 自动 | 对话中识别 | 仅进程内存 |
+| 会话 | 会话标签页 | 落盘；会话销毁后不再可用，元数据不会自动清理 |
+| 自动 | 对话中识别 | 仅进程内存（每会话默认 ≤16 条） |
 
 按归一化名称（忽略大小写）从会话 → 项目 → 全局解析，越具体优先级越高；同一作用域内不允许同名。
 
 ## 安全模型
 
-插件防的是**意外泄漏**：值不进提示词、工具结果、日志和接口响应。它**不防**有 shell 的 agent 主动提取（例如 `base64 $DSH_SECRET_X`），也不防同用户进程直接读凭据文件。完整「保证 / 不保证」见 [docs/SECURITY.md](docs/SECURITY.md)。
+插件防的是**意外泄漏**：已登记的值默认不进提示词、工具结果、日志和接口响应（12 字符下限，见上）。它**不防**有 shell 的 agent 主动提取（例如 `base64 $DSH_SECRET_X`），也不防同用户进程直接读凭据文件。完整「保证 / 不保证」见 [docs/SECURITY.md](docs/SECURITY.md)。
 
 ## 开发
 
@@ -123,7 +127,7 @@ curl -s -H "Authorization: Bearer $DSH_SECRET_OPENAI_API_KEY" https://api.exampl
 node --test test/*.test.js
 ```
 
-105 个测试，无第三方依赖，无构建步骤；`client.js` 由 Harness Web 直接加载。见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+115 个测试，无第三方依赖，无构建步骤；`client.js` 由 Harness Web 直接加载。见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 许可证
 

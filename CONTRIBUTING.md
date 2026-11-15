@@ -28,6 +28,7 @@ Short imperative subject, a blank line, then why the change is needed. English o
 - [ ] `node --test test/*.test.js` passes
 - [ ] No real credentials, tokens, or personal paths in the diff
 - [ ] Docs updated when behavior or the threat model changes
+- [ ] `README.md` and `README.en.md` updated together when user-facing behavior changes
 
 ---
 
@@ -37,3 +38,4 @@ Short imperative subject, a blank line, then why the change is needed. English o
 - 一个 PR 只做一件事；无新增运行时依赖。
 - 改动 Host 半需在插件管理器里重新启用插件；改 `client.js` 刷新页面即可。
 - 若改动了安全边界，请同步更新 [docs/SECURITY.md](docs/SECURITY.md)。
+- 用户可见行为变化时，`README.md` 与 `README.en.md` 同步修改。

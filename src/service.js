@@ -24,6 +24,13 @@ const AUTO_ENV_PREFIX = 'DSH_SECRET_AUTO_'
 export const MIN_REDACTABLE_VALUE = 12
 
 /**
+ * Shortest value used when a variable opts into forced redaction. Even then a
+ * one- or two-character value would rewrite unrelated text, so the floor stays
+ * at four unless the constant is changed deliberately.
+ */
+export const MIN_FORCED_REDACTABLE_VALUE = 4
+
+/**
  * Reject a name another definition in the same scope already uses. Comparison
  * runs on the sanitized suffix, so `a`, `A`, and `a!` collide; the same name in
  * a different scope is the supported override mechanism and stays allowed.
@@ -126,6 +133,34 @@ export function createSecretVariables({
     }
   }
 
+  /**
+   * Classify how a stored value would be masked in output. Only the state is
+   * exposed to the client: never the value, and not its length either.
+   * @param {string | undefined} value - resolved value, if configured.
+   * @param {boolean} forceRedact - whether the definition opted into forced redaction.
+   * @returns {'auto' | 'forced' | 'none'} masking state.
+   */
+  function redactionOf(value, forceRedact) {
+    if (value === undefined || value.length === 0) return 'none'
+    if (forceRedact === true && value.length >= MIN_FORCED_REDACTABLE_VALUE) return 'forced'
+    return value.length >= MIN_REDACTABLE_VALUE ? 'auto' : 'none'
+  }
+
+  /** @param {ReadonlyArray<{ id: string, forceRedact?: boolean }>} rows @returns {Promise<Map<string, 'auto'|'forced'|'none'>>} per-id masking state. */
+  async function redactionsFor(rows) {
+    const out = new Map()
+    for (const row of rows) {
+      let value
+      try {
+        value = await values.resolve(refOf(row.id))
+      } catch {
+        value = undefined
+      }
+      out.set(row.id, redactionOf(value, row.forceRedact === true))
+    }
+    return out
+  }
+
   function autoEntries(sessionId) {
     return [...(autos.get(String(sessionId))?.entries ?? [])]
   }
@@ -151,7 +186,7 @@ export function createSecretVariables({
   /**
    * @param {string} sessionId - owning session.
    * @param {string} [workspaceId] - explicit workspace override.
-   * @returns {Promise<Array<{ value: string, ref: string, envName: string }>>} enabled values.
+   * @returns {Promise<Array<{ value: string, ref: string, envName: string, forceRedact: boolean }>>} enabled values.
    */
   async function enabledPairs(sessionId, workspaceId) {
     const snapshot = await load()
@@ -161,7 +196,7 @@ export function createSecretVariables({
       if (!item.enabled) continue
       const value = await values.resolve(refOf(item.id))
       if (value === undefined) continue
-      pairs.push({ value, ref: `$${item.envName}`, envName: item.envName })
+      pairs.push({ value, ref: `$${item.envName}`, envName: item.envName, forceRedact: item.forceRedact === true })
     }
     return pairs
   }
@@ -169,6 +204,7 @@ export function createSecretVariables({
   async function listGlobals() {
     const snapshot = await load()
     const stored = await describeRefs(snapshot.globals.map((item) => item.id))
+    const masks = await redactionsFor(snapshot.globals)
     const envNames = envNamesFor(snapshot)
     return {
       globals: snapshot.globals
@@ -177,12 +213,13 @@ export function createSecretVariables({
           envName: envNames.get(global.id),
           ref: refOf(global.id),
           set: stored[global.id] === true,
+          redaction: masks.get(global.id),
         }))
         .sort((left, right) => left.name.localeCompare(right.name)),
     }
   }
 
-  async function upsertGlobal({ id, name, description, availability = 'all', enabledByDefault = false }) {
+  async function upsertGlobal({ id, name, description, availability = 'all', enabledByDefault = false, forceRedact }) {
     requireName(name)
     const created = await mutate((draft) => {
       requireUniqueName(draft.globals, name, id)
@@ -192,6 +229,9 @@ export function createSecretVariables({
         if (description !== undefined) existing.description = description
         existing.availability = availability
         existing.enabledByDefault = enabledByDefault === true
+        // Omitted by toggle-style updates: keep the stored flag instead of
+        // silently clearing it.
+        if (forceRedact !== undefined) existing.forceRedact = forceRedact === true
         return { id: existing.id }
       }
       const row = {
@@ -200,6 +240,7 @@ export function createSecretVariables({
         ...(description === undefined ? {} : { description }),
         availability,
         enabledByDefault: enabledByDefault === true,
+        forceRedact: forceRedact === true,
         createdAt: now(),
       }
       draft.globals.push(row)
@@ -237,11 +278,13 @@ export function createSecretVariables({
     const envNames = envNamesFor(snapshot)
     const ids = [...snapshot.globals.map((item) => item.id), ...record.variables.map((item) => item.id)]
     const stored = await describeRefs(ids)
+    const masks = await redactionsFor([...snapshot.globals, ...record.variables])
     const decorate = (item) => ({
       ...item,
       envName: envNames.get(item.id),
       ref: refOf(item.id),
       set: stored[item.id] === true,
+      redaction: masks.get(item.id),
       override: record.overrides[item.id] ?? null,
       effective: record.overrides[item.id] ?? item.enabledByDefault,
     })
@@ -255,7 +298,7 @@ export function createSecretVariables({
     }
   }
 
-  async function addWorkspaceVariable(workspaceId, { name, description, enabledByDefault = true }) {
+  async function addWorkspaceVariable(workspaceId, { name, description, enabledByDefault = true, forceRedact }) {
     requireName(name)
     const created = await mutate((draft) => {
       const key = String(workspaceId)
@@ -266,6 +309,7 @@ export function createSecretVariables({
         name,
         ...(description === undefined ? {} : { description }),
         enabledByDefault: enabledByDefault !== false,
+        forceRedact: forceRedact === true,
         createdAt: now(),
       }
       draft.workspaces[key].variables.push(row)
@@ -306,10 +350,12 @@ export function createSecretVariables({
     const scope = scopeOf(sessionId, workspaceId)
     const items = effectiveVariables(snapshot, scope)
     const stored = await describeRefs(items.map((item) => item.id))
+    const masks = await redactionsFor(items)
     const rows = items.map((item) => ({
       ...item,
       ref: refOf(item.id),
       set: stored[item.id] === true,
+      redaction: masks.get(item.id),
     }))
     for (const entry of autoEntries(scope.sessionId)) {
       rows.push({
@@ -332,7 +378,7 @@ export function createSecretVariables({
     }
   }
 
-  async function addSessionVariable(sessionId, { name, description, enabledByDefault = true }) {
+  async function addSessionVariable(sessionId, { name, description, enabledByDefault = true, forceRedact }) {
     requireName(name)
     const created = await mutate((draft) => {
       const key = String(sessionId)
@@ -343,6 +389,7 @@ export function createSecretVariables({
         name,
         ...(description === undefined ? {} : { description }),
         enabledByDefault: enabledByDefault !== false,
+        forceRedact: forceRedact === true,
         createdAt: now(),
       }
       draft.sessions[key].variables.push(row)
@@ -376,6 +423,32 @@ export function createSecretVariables({
       draft.sessions[key].overrides[variableId] = enabled === true
     })
     return getSession(sessionId)
+  }
+
+  /**
+   * Toggle the forced-redaction flag of one definition. A forced definition
+   * keeps its value in redaction even when shorter than the default floor.
+   * @param {{ source: 'global'|'workspace'|'session', id: string, workspaceId?: string, sessionId?: string }} target - owning definition.
+   * @param {boolean} enabled - whether short values participate in redaction.
+   * @returns {Promise<void>}
+   */
+  async function setForceRedact({ source, id, workspaceId, sessionId }, enabled) {
+    await mutate((draft) => {
+      let row
+      if (source === 'global') {
+        row = draft.globals.find((item) => item.id === id)
+      } else if (source === 'workspace') {
+        if (workspaceId === undefined) throw new SecretVariablesError('INVALID_INPUT', 'workspaceId is required for a workspace variable')
+        row = draft.workspaces[String(workspaceId)]?.variables.find((item) => item.id === id)
+      } else if (source === 'session') {
+        if (sessionId === undefined) throw new SecretVariablesError('INVALID_INPUT', 'sessionId is required for a session variable')
+        row = draft.sessions[String(sessionId)]?.variables.find((item) => item.id === id)
+      } else {
+        throw new SecretVariablesError('INVALID_INPUT', `unknown variable source ${String(source)}`)
+      }
+      if (row === undefined) throw new SecretVariablesError('NOT_FOUND', `unknown variable ${id}`)
+      row.forceRedact = enabled === true
+    })
   }
 
   async function clearValue(ref) {
@@ -423,7 +496,7 @@ export function createSecretVariables({
 
   async function redact(text, sessionId) {
     if (typeof text !== 'string' || text.length === 0) return { text, changed: false, claimed: 0 }
-    const pairs = (await enabledPairs(sessionId)).filter((pair) => pair.value.length >= MIN_REDACTABLE_VALUE)
+    const pairs = (await enabledPairs(sessionId)).filter((pair) => pair.value.length >= (pair.forceRedact === true ? MIN_FORCED_REDACTABLE_VALUE : MIN_REDACTABLE_VALUE))
     const known = replaceValues(text, pairs)
     let out = known.text
     let claimed = 0
@@ -460,6 +533,7 @@ export function createSecretVariables({
     addSessionVariable,
     removeSessionVariable,
     setSessionOverride,
+    setForceRedact,
     clearValue,
     envOverlay,
     primeEnv,

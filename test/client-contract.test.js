@@ -114,3 +114,19 @@ test('T-U14 the client names a duplicate in the current language', () => {
   assert.match(client, /function failureText\(t, error\)/u)
   assert.equal((client.match(/setFailure\(failureText\(t, error\)\)/gu) ?? []).length, 3)
 })
+
+test('T-U15 the client warns about short values and offers forced redaction', () => {
+  for (const key of ['warn.shortValueTitle', 'warn.shortValue', 'warn.shortValueForce', 'warn.shortValueTooShort', 'action.justAdd', 'action.forceAdd', 'action.justSave', 'action.forceSave', 'field.forceRedact', 'field.redactAuto', 'field.redactForced', 'field.redactNone', 'redact.auto.hint', 'redact.none.hint']) {
+    assert.ok(client.includes(`'${key}'`), key)
+  }
+  assert.match(client, /function ShortValueDialog\(/u)
+  assert.match(client, /op: 'setForceRedact'/u)
+  assert.match(client, /onForceRedact/u)
+  assert.equal((client.match(/forceRedact: mode === 'force'/gu) ?? []).length, 3)
+  assert.equal((client.match(/ShortValueDialog, \{/gu) ?? []).length, 4)
+  assert.equal((client.match(/ShortValueWarning/gu) ?? []).length, 0)
+  assert.match(client, /MIN_FORCE_REDACTABLE_VALUE = 4/u)
+  assert.match(client, /const canForce = length >= MIN_FORCE_REDACTABLE_VALUE/u)
+  assert.match(client, /item\.redaction/u)
+  assert.match(client, /function redactionStyle\(/u)
+})

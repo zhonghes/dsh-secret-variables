@@ -117,6 +117,7 @@ function normalizeGlobal(raw) {
     ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
     availability,
     enabledByDefault: raw.enabledByDefault === true,
+    forceRedact: raw.forceRedact === true,
     createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : 0,
   }
 }
@@ -130,6 +131,7 @@ function normalizeVariable(raw) {
     name: raw.name,
     ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
     enabledByDefault: raw.enabledByDefault !== false,
+    forceRedact: raw.forceRedact === true,
     createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : 0,
   }
 }
@@ -193,7 +195,7 @@ export function envNamesFor(snapshot) {
  * The same sanitized name at several scopes collapses to one entry.
  * @param {ReturnType<typeof normalizeSnapshot>} snapshot - stored definitions.
  * @param {{ workspaceId?: string, sessionId: string }} scope - addressed session.
- * @returns {Array<{ id: string, name: string, source: 'global'|'workspace'|'session', envName: string, enabled: boolean, available: boolean }>}
+ * @returns {Array<{ id: string, name: string, source: 'global'|'workspace'|'session', envName: string, enabled: boolean, available: boolean, forceRedact: boolean }>}
  */
 export function effectiveVariables(snapshot, { workspaceId, sessionId }) {
   const envNames = envNamesFor(snapshot)
@@ -216,6 +218,7 @@ export function effectiveVariables(snapshot, { workspaceId, sessionId }) {
       envName: envNames.get(global.id),
       enabled,
       available,
+      forceRedact: global.forceRedact === true,
     })
   }
 
@@ -229,6 +232,7 @@ export function effectiveVariables(snapshot, { workspaceId, sessionId }) {
         envName: envNames.get(variable.id),
         enabled,
         available: true,
+        forceRedact: variable.forceRedact === true,
       })
     }
   }
@@ -242,6 +246,7 @@ export function effectiveVariables(snapshot, { workspaceId, sessionId }) {
       envName: envNames.get(variable.id),
       enabled,
       available: true,
+      forceRedact: variable.forceRedact === true,
     })
   }
 

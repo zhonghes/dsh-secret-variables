@@ -87,6 +87,7 @@ export function createHttpHandler(service) {
               description: body.description,
               availability: body.availability ?? 'all',
               enabledByDefault: body.enabledByDefault === true,
+              forceRedact: body.forceRedact === true,
             }) } })
           case 'updateGlobal':
             return json(200, { ok: true, data: { global: await service.upsertGlobal({
@@ -95,6 +96,7 @@ export function createHttpHandler(service) {
               description: body.description,
               availability: body.availability ?? 'all',
               enabledByDefault: body.enabledByDefault === true,
+              forceRedact: body.forceRedact === undefined ? undefined : body.forceRedact === true,
             }) } })
           case 'removeGlobal':
             await service.removeGlobal(requireString(body.id, 'id'))
@@ -102,7 +104,7 @@ export function createHttpHandler(service) {
           case 'addWorkspaceVar':
             return json(200, { ok: true, data: { variable: await service.addWorkspaceVariable(
               requireString(body.workspaceId, 'workspaceId'),
-              { name: requireString(body.name, 'name'), description: body.description, enabledByDefault: body.enabledByDefault !== false },
+              { name: requireString(body.name, 'name'), description: body.description, enabledByDefault: body.enabledByDefault !== false, forceRedact: body.forceRedact === true },
             ) } })
           case 'removeWorkspaceVar':
             await service.removeWorkspaceVariable(requireString(body.workspaceId, 'workspaceId'), requireString(body.id, 'id'))
@@ -116,7 +118,7 @@ export function createHttpHandler(service) {
           case 'addSessionVar':
             return json(200, { ok: true, data: { variable: await service.addSessionVariable(
               requireString(body.sessionId, 'sessionId'),
-              { name: requireString(body.name, 'name'), description: body.description, enabledByDefault: body.enabledByDefault !== false },
+              { name: requireString(body.name, 'name'), description: body.description, enabledByDefault: body.enabledByDefault !== false, forceRedact: body.forceRedact === true },
             ) } })
           case 'removeSessionVar':
             await service.removeSessionVariable(requireString(body.sessionId, 'sessionId'), requireString(body.id, 'id'))
@@ -127,6 +129,14 @@ export function createHttpHandler(service) {
               requireString(body.variableId, 'variableId'),
               body.enabled === true,
             ) } })
+          case 'setForceRedact':
+            await service.setForceRedact({
+              source: requireString(body.source, 'source'),
+              id: requireString(body.id, 'id'),
+              ...(typeof body.workspaceId === 'string' ? { workspaceId: body.workspaceId } : {}),
+              ...(typeof body.sessionId === 'string' ? { sessionId: body.sessionId } : {}),
+            }, body.enabled === true)
+            return json(200, { ok: true, data: {} })
           case 'clearValue':
             await service.clearValue(requireString(body.ref, 'ref'))
             return json(200, { ok: true, data: {} })

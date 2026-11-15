@@ -257,3 +257,86 @@ test('T-S9 the service lists projects for scope selection', () => {
   })
   assert.deepEqual(service.listWorkspaces(), [{ id: 'w1', title: 'demo', path: '/tmp/demo' }])
 })
+
+test('T-R17 a forced short value is redacted; the 4-character floor still applies', async () => {
+  const { service, values } = build()
+  const forced = await service.upsertGlobal({ name: 'FORCED', availability: 'all', forceRedact: true })
+  await values.set(forced.ref, 'abcd')
+  await service.setSessionOverride('s1', forced.id, true)
+  const replaced = await service.redact('code=abcd', 's1')
+  assert.equal(replaced.text, 'code=$DSH_SECRET_FORCED')
+
+  const tiny = await service.upsertGlobal({ name: 'TINY', availability: 'all', forceRedact: true })
+  await values.set(tiny.ref, 'abc')
+  await service.setSessionOverride('s1', tiny.id, true)
+  const kept = await service.redact('code=abc', 's1')
+  assert.equal(kept.text, 'code=abc')
+})
+
+test('T-R18 forceRedact persists and unrelated updates keep it', async () => {
+  const { service } = build()
+  const global = await service.upsertGlobal({ name: 'FLAG', availability: 'all', forceRedact: true })
+  assert.equal(global.forceRedact, true)
+  await service.upsertGlobal({ id: global.id, name: 'FLAG', availability: 'all', enabledByDefault: true })
+  assert.equal((await service.listGlobals()).globals[0].forceRedact, true)
+  await service.upsertGlobal({ id: global.id, name: 'FLAG', availability: 'all', forceRedact: false })
+  assert.equal((await service.listGlobals()).globals[0].forceRedact, false)
+
+  await service.addWorkspaceVariable('w1', { name: 'WF', forceRedact: true })
+  assert.equal((await service.getWorkspace('w1')).variables.find((item) => item.name === 'WF').forceRedact, true)
+  await service.addSessionVariable('s1', { name: 'SF', forceRedact: true })
+  assert.equal((await service.getSession('s1', 'w1')).items.find((item) => item.name === 'SF').forceRedact, true)
+})
+
+test('T-R19 setForceRedact toggles each source and rejects unknown targets', async () => {
+  const { service } = build()
+  const global = await service.upsertGlobal({ name: 'G', availability: 'all' })
+  await service.setForceRedact({ source: 'global', id: global.id }, true)
+  assert.equal((await service.listGlobals()).globals[0].forceRedact, true)
+  await service.setForceRedact({ source: 'global', id: global.id }, false)
+  assert.equal((await service.listGlobals()).globals[0].forceRedact, false)
+
+  const workspaceVar = await service.addWorkspaceVariable('w1', { name: 'W' })
+  await service.setForceRedact({ source: 'workspace', workspaceId: 'w1', id: workspaceVar.id }, true)
+  assert.equal((await service.getWorkspace('w1')).variables.find((item) => item.id === workspaceVar.id).forceRedact, true)
+
+  const sessionVar = await service.addSessionVariable('s1', { name: 'S' })
+  await service.setForceRedact({ source: 'session', sessionId: 's1', id: sessionVar.id }, true)
+  assert.equal((await service.getSession('s1', 'w1')).items.find((item) => item.id === sessionVar.id).forceRedact, true)
+
+  await assert.rejects(service.setForceRedact({ source: 'global', id: 'nope' }, true), (error) => error.code === 'NOT_FOUND')
+  await assert.rejects(service.setForceRedact({ source: 'nope', id: 'x' }, true), (error) => error.code === 'INVALID_INPUT')
+  await assert.rejects(service.setForceRedact({ source: 'workspace', id: 'x' }, true), (error) => error.code === 'INVALID_INPUT')
+})
+
+test('T-R20 rows report their masking state without exposing values', async () => {
+  const { service, values } = build()
+  const long = await service.upsertGlobal({ name: 'LONG', availability: 'all', enabledByDefault: true })
+  await values.set(long.ref, 'abcdefghijkl')
+  const short = await service.upsertGlobal({ name: 'SHORT', availability: 'all', enabledByDefault: true })
+  await values.set(short.ref, 'abcde')
+  const forced = await service.upsertGlobal({ name: 'FORCED', availability: 'all', enabledByDefault: true, forceRedact: true })
+  await values.set(forced.ref, 'vwxyz')
+  const tiny = await service.upsertGlobal({ name: 'TINY', availability: 'all', enabledByDefault: true, forceRedact: true })
+  await values.set(tiny.ref, 'abc')
+  await service.upsertGlobal({ name: 'UNSET', availability: 'all' })
+
+  const { globals } = await service.listGlobals()
+  const byName = Object.fromEntries(globals.map((row) => [row.name, row]))
+  assert.equal(byName.LONG.redaction, 'auto')
+  assert.equal(byName.SHORT.redaction, 'none')
+  assert.equal(byName.FORCED.redaction, 'forced')
+  assert.equal(byName.TINY.redaction, 'none')
+  assert.equal(byName.UNSET.redaction, 'none')
+  assert.equal(JSON.stringify(globals).includes('abcdefghijkl'), false)
+
+  const workspaceVar = await service.addWorkspaceVariable('w1', { name: 'WLONG' })
+  await values.set(workspaceVar.ref, 'abcdefghijkl')
+  const workspace = await service.getWorkspace('w1')
+  assert.equal(workspace.variables.find((row) => row.name === 'WLONG').redaction, 'auto')
+
+  const sessionVar = await service.addSessionVariable('s1', { name: 'SFORCED', forceRedact: true })
+  await values.set(sessionVar.ref, 'vwxyz')
+  const view = await service.getSession('s1', 'w1')
+  assert.equal(view.items.find((row) => row.name === 'SFORCED').redaction, 'forced')
+})

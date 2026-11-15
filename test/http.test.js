@@ -149,3 +149,35 @@ test('T-H13 a duplicate name is a conflict', async () => {
   assert.equal(body.ok, false)
   assert.equal(body.error, 'DUPLICATE_NAME')
 })
+
+test('T-H14 forceRedact is stored, preserved by unrelated updates, and toggleable', async () => {
+  const { handler } = build()
+  const created = await post(handler, { op: 'addGlobal', name: 'FORCED', availability: 'all', forceRedact: true })
+  const createdBody = await created.json()
+  assert.equal(createdBody.data.global.forceRedact, true)
+  const id = createdBody.data.global.id
+
+  await post(handler, { op: 'updateGlobal', id, name: 'FORCED', availability: 'all', enabledByDefault: true })
+  const preserved = await (await handler(url('op=globals'))).json()
+  assert.equal(preserved.data.globals[0].forceRedact, true)
+
+  const toggled = await post(handler, { op: 'setForceRedact', source: 'global', id, enabled: false })
+  assert.equal(toggled.status, 200)
+  const listed = await (await handler(url('op=globals'))).json()
+  assert.equal(listed.data.globals[0].forceRedact, false)
+})
+
+test('T-H15 setForceRedact validates its target', async () => {
+  const { handler } = build()
+  assert.equal((await post(handler, { op: 'setForceRedact', source: 'bogus', id: 'x' })).status, 422)
+  assert.equal((await post(handler, { op: 'setForceRedact', source: 'global', id: 'nope' })).status, 404)
+})
+
+test('T-H16 the route reports the masking state and never the value', async () => {
+  const { service, values, handler } = build()
+  const created = await service.upsertGlobal({ name: 'LONG', availability: 'all' })
+  await values.set(created.ref, 'abcdefghijkl')
+  const body = await (await handler(url('op=globals'))).json()
+  assert.equal(body.data.globals[0].redaction, 'auto')
+  assert.equal(JSON.stringify(body).includes('abcdefghijkl'), false)
+})

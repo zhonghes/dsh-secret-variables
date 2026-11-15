@@ -177,3 +177,28 @@ test('T-S3 malformed stored data is rejected, unknown fields ignored', () => {
   assert.equal(normalized.globals.length, 1)
   assert.equal('extra' in normalized, false)
 })
+
+test('T-R16 forceRedact defaults off and survives normalization', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'FORCED', availability: 'all', forceRedact: true, createdAt: 1 }],
+    workspaces: { w1: { overrides: {}, variables: [{ id: 'wv1', name: 'W', createdAt: 2 }] } },
+    sessions: { s1: { overrides: {}, variables: [{ id: 'sv1', name: 'S', forceRedact: true, createdAt: 3 }] } },
+  })
+  assert.equal(snapshot.globals[0].forceRedact, true)
+  assert.equal(snapshot.workspaces.w1.variables[0].forceRedact, false)
+  assert.equal(snapshot.sessions.s1.variables[0].forceRedact, true)
+})
+
+test('T-R16b the effective item carries the winning definition flag', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'SHARED', availability: 'all', forceRedact: true, enabledByDefault: true, createdAt: 1 }],
+    workspaces: {},
+    sessions: { s1: { overrides: {}, variables: [{ id: 'sv1', name: 'SHARED', createdAt: 2 }] } },
+  })
+  const globalOnly = effectiveVariables(snapshot, { sessionId: 's0' }).find((item) => item.id === 'g1')
+  assert.equal(globalOnly.forceRedact, true)
+  const shadowed = effectiveVariables(snapshot, { sessionId: 's1' }).find((item) => item.id === 'sv1')
+  assert.equal(shadowed.forceRedact, false)
+})

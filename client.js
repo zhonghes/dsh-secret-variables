@@ -13,6 +13,11 @@ window.__ModuleLoader__.load({
     const NS = 'secret-variables'
     const ROUTE = '/api/secret-variables'
 
+    /** Mirrors the host floor: shorter values are injected but never text-replaced. */
+    const MIN_REDACTABLE_VALUE = 12
+    /** Mirror of the host floor used when forced redaction is on. */
+    const MIN_FORCE_REDACTABLE_VALUE = 4
+
     const STRINGS = {
       zh: {
         'panel.title': '密钥管理',
@@ -60,6 +65,20 @@ window.__ModuleLoader__.load({
         'notice.values': '值由 Host 保存，写入后不再显示。shell 命令中以 $DSH_SECRET_<NAME> 引用。',
         'notice.onlyShell': '只有一次性的 bash 与 pwsh 命令会收到这些值。',
         'count.enabled': '已启用 {{enabled}} / {{total}}',
+        'warn.shortValueTitle': '值过短',
+        'warn.shortValue': '这个值只有 {{length}} 个字符，短于 12 字符。注入不受影响——命令里照常可以用；但它默认不做输出脱敏，命令把它打印出来时会原样进入模型上下文和日志。',
+        'warn.shortValueForce': '开启「强制脱敏」后，短值也会在输出里被替换成 $DSH_SECRET_…（至少按 4 个字符匹配）；代价是可能误替换无关文本。它只改变输出，不影响注入。',
+        'warn.shortValueTooShort': '这个值不足 4 个字符，而强制脱敏至少按 4 个字符匹配，所以它不会被替换——打印出来就会原样进入上下文和日志。',
+        'field.redactAuto': '输出自动脱敏',
+        'field.redactForced': '输出强制脱敏',
+        'field.redactNone': '输出未脱敏',
+        'redact.auto.hint': '输出里出现的值会被替换成 $DSH_SECRET_… 引用',
+        'redact.none.hint': '值太短，输出里不会被替换；注入不受影响',
+        'action.justAdd': '仅添加',
+        'action.forceAdd': '添加并强制脱敏',
+        'action.justSave': '仅保存',
+        'action.forceSave': '保存并强制脱敏',
+        'field.forceRedact': '强制脱敏',
         'error.duplicateName': '同一页里已有同名变量，换一个名字再试',
         'error.load': '加载失败',
         'error.save': '保存失败',
@@ -110,6 +129,20 @@ window.__ModuleLoader__.load({
         'notice.values': 'Values are stored by the Host and never shown again. Shell commands use them as $DSH_SECRET_<NAME>.',
         'notice.onlyShell': 'Only one-shot bash and pwsh commands receive these values.',
         'count.enabled': '{{enabled}} / {{total}} enabled',
+        'warn.shortValueTitle': 'Value too short',
+        'warn.shortValue': 'This value is only {{length}} characters long, below 12. Injection is unaffected — commands can still use it — but it is not masked in output by default, so printing it puts the plain value into the model context and logs.',
+        'warn.shortValueForce': 'With forced redaction the short value is replaced by $DSH_SECRET_… in output too (matched at 4 characters or more); a short value may also rewrite unrelated text. It only changes output, never injection.',
+        'warn.shortValueTooShort': 'This value is under 4 characters, and forced redaction matches at 4 characters or more, so it will not be replaced — printing it puts the plain value into the context and logs.',
+        'field.redactAuto': 'Output: auto',
+        'field.redactForced': 'Output: forced',
+        'field.redactNone': 'Output: none',
+        'redact.auto.hint': 'Occurrences in output are replaced by $DSH_SECRET_… references',
+        'redact.none.hint': 'Too short to be replaced in output; injection is unaffected',
+        'action.justAdd': 'Add only',
+        'action.forceAdd': 'Add with forced redaction',
+        'action.justSave': 'Save only',
+        'action.forceSave': 'Save with forced redaction',
+        'field.forceRedact': 'Forced redaction',
         'error.duplicateName': 'A variable with that name already exists here',
         'error.load': 'Could not load',
         'error.save': 'Could not save',
@@ -125,6 +158,8 @@ window.__ModuleLoader__.load({
       base: 'var(--dsw-alias-bg-base)',
       accent: 'var(--dsw-alias-state-business-primary)',
       danger: 'var(--dsw-alias-state-error-primary)',
+      success: 'var(--dsw-alias-state-success-primary)',
+      warn: 'var(--dsw-alias-state-warn-primary)',
       hover: 'var(--dsw-alias-interactive-bg-hover)',
     }
 
@@ -132,7 +167,11 @@ window.__ModuleLoader__.load({
     const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace'
 
     const S = {
-      page: { padding: '24px 28px', color: COLOR.text, fontSize: 14, boxSizing: 'border-box', height: '100%', overflow: 'auto' },
+      page: {
+        width: '100%', height: '100%', overflow: 'auto', boxSizing: 'border-box',
+        padding: '0 clamp(24px, 4vw, 48px)', color: COLOR.text, fontSize: 14,
+      },
+      pageBody: { width: '100%', maxWidth: 960, margin: '0 auto', padding: '24px 0 48px', boxSizing: 'border-box' },
       header: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, minHeight: 32 },
       title: { fontSize: 17, fontWeight: 600, margin: 0, lineHeight: '24px' },
       subtitle: { color: COLOR.secondary, fontSize: 13, margin: '0 0 16px', lineHeight: 1.5 },
@@ -155,7 +194,7 @@ window.__ModuleLoader__.load({
       addRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, margin: '0 0 16px' },
       card: { border: `1px solid ${COLOR.border}`, borderRadius: 12, overflow: 'hidden', background: COLOR.layer },
       row: {
-        display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 84px 88px 40px 176px', columnGap: 12,
+        display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 84px 104px 40px 176px', columnGap: 12,
         alignItems: 'center', minHeight: 52, padding: '8px 14px', boxSizing: 'border-box',
       },
       nameCell: { minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 },
@@ -179,9 +218,12 @@ window.__ModuleLoader__.load({
       menuHint: { padding: '6px 8px', fontSize: 12, color: COLOR.tertiary, whiteSpace: 'normal' },
       notice: { color: COLOR.tertiary, fontSize: 12, marginTop: 12, lineHeight: 1.6 },
       error: { color: COLOR.danger, fontSize: 12.5, margin: '0 0 10px', lineHeight: 1.5 },
+      forceCheck: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: COLOR.secondary, whiteSpace: 'nowrap' },
+      dialogText: { fontSize: 13, lineHeight: 1.7, color: COLOR.text, margin: '0 0 10px' },
+      dialogActions: { display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 },
       empty: { padding: '18px 14px', color: COLOR.tertiary, fontSize: 13 },
       backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.42)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2147483000 },
-      dialog: { width: 'min(600px, calc(100vw - 32px))', maxHeight: 'min(80vh, 720px)', overflow: 'auto', background: COLOR.layer, color: COLOR.text, borderRadius: 14, padding: 20, boxShadow: '0 18px 60px rgba(0,0,0,0.35)', border: `1px solid ${COLOR.border}`, boxSizing: 'border-box' },
+      dialog: { width: 'min(760px, calc(100vw - 32px))', maxHeight: 'min(80vh, 720px)', overflow: 'auto', background: COLOR.layer, color: COLOR.text, borderRadius: 14, padding: 20, boxShadow: '0 18px 60px rgba(0,0,0,0.35)', border: `1px solid ${COLOR.border}`, boxSizing: 'border-box' },
       switch: (on) => ({
         position: 'relative', width: 34, height: 18, borderRadius: 999, border: 'none', cursor: 'pointer',
         background: on ? COLOR.accent : COLOR.border, transition: 'background 120ms ease', flex: 'none', justifySelf: 'center',
@@ -259,6 +301,19 @@ window.__ModuleLoader__.load({
       let out = template
       for (const [key, value] of Object.entries(values)) out = out.split(`{{${key}}}`).join(String(value))
       return out
+    }
+
+    const REDACTION_LABEL = { auto: 'field.redactAuto', forced: 'field.redactForced', none: 'field.redactNone' }
+    const REDACTION_HINT = { auto: 'redact.auto.hint', forced: 'warn.shortValueForce', none: 'redact.none.hint' }
+
+    function redactionStyle(kind) {
+      const tone = kind === 'none' ? COLOR.danger : kind === 'forced' ? COLOR.warn : COLOR.success
+      return {
+        ...S.badge,
+        flex: 'none',
+        color: tone,
+        borderColor: tone,
+      }
     }
 
     function Button({ children, onClick, primary, danger, title, disabled, style }) {
@@ -414,7 +469,26 @@ window.__ModuleLoader__.load({
       return children === null || children === undefined ? null : h('div', { style: S.error }, children)
     }
 
-    function Dialog({ open, title, onClose, children }) {
+    /**
+     * Modal shown when a short value would be saved without forced redaction.
+     * Injection always happens; this only decides whether the short value also
+     * takes part in output masking.
+     */
+    function ShortValueDialog({ t, length, scope, busy, onClose, onAnyway, onForce }) {
+      const canForce = length >= MIN_FORCE_REDACTABLE_VALUE
+      const confirm = scope === 'add' ? t('action.add') : t('action.save')
+      return h(Dialog, { open: true, title: t('warn.shortValueTitle'), onClose },
+        h('p', { style: S.dialogText }, fill(t('warn.shortValue'), { length })),
+        h('p', { style: S.dialogText }, canForce ? t('warn.shortValueForce') : t('warn.shortValueTooShort')),
+        h('div', { style: S.dialogActions },
+          canForce
+            ? h(React.Fragment, null,
+              h(Button, { onClick: onAnyway, disabled: busy === true }, scope === 'add' ? t('action.justAdd') : t('action.justSave')),
+              h(Button, { onClick: onForce, primary: true, disabled: busy === true }, scope === 'add' ? t('action.forceAdd') : t('action.forceSave')))
+            : h(Button, { onClick: onAnyway, primary: true, disabled: busy === true }, confirm)))
+    }
+
+    function Dialog({ open, title, onClose, wide, children }) {
       React.useEffect(() => {
         if (!open) return undefined
         const onKey = (event) => {
@@ -424,9 +498,12 @@ window.__ModuleLoader__.load({
         return () => window.removeEventListener('keydown', onKey)
       }, [open, onClose])
       if (!open) return null
+      // The wide variant matches the page column (960px of content); the narrow
+      // one stays for short confirmation dialogs.
+      const style = wide === true ? { ...S.dialog, width: 'min(1000px, calc(100vw - 32px))' } : S.dialog
       return ReactDOM.createPortal(
         h('div', { style: S.backdrop, onMouseDown: (event) => { if (event.target === event.currentTarget) onClose() } },
-          h('div', { style: S.dialog, role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+          h('div', { style, role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
             h('div', { style: { ...S.header, marginBottom: 14 } },
               h('h2', { style: { ...S.title, fontSize: 16 } }, title),
               h('div', { style: { flex: 1 } }),
@@ -441,7 +518,7 @@ window.__ModuleLoader__.load({
     // Save/Cancel all live inside the row that is being edited.
     function SecretRow(props) {
       const {
-        t, remote, item, checked, onToggle, onDelete, onSave, onChanged,
+        t, remote, item, checked, onToggle, onDelete, onSave, onChanged, onForceRedact,
         canDelete, canEditValue, toggleDisabled, badge, badgeTitle,
         canEditScope, workspaces,
       } = props
@@ -452,16 +529,21 @@ window.__ModuleLoader__.load({
       const [error, setError] = React.useState(null)
       const [scope, setScope] = React.useState(() => scopeOf(item.availability))
       const [menuOpen, setMenuOpen] = React.useState(false)
+      const [forceOn, setForceOn] = React.useState(item.forceRedact === true)
+      const [shortGate, setShortGate] = React.useState(null)
       const hasValue = item.set !== false
       const sameScope = (left, right) => left.all === right.all
         && [...left.ids].sort().join(',') === [...right.ids].sort().join(',')
       const scopeChanged = canEditScope === true && !sameScope(scope, scopeOf(item.availability))
-      const canSave = value.length > 0 || scopeChanged
+      const forceDirty = forceOn !== (item.forceRedact === true)
+      const canSave = value.length > 0 || scopeChanged || forceDirty
 
       const start = () => {
         setValue('')
         setError(null)
+        setShortGate(null)
         setMenuOpen(false)
+        setForceOn(item.forceRedact === true)
         setScope(scopeOf(item.availability))
         setEditing(true)
       }
@@ -469,13 +551,26 @@ window.__ModuleLoader__.load({
         setEditing(false)
         setValue('')
         setError(null)
+        setShortGate(null)
         setMenuOpen(false)
       }
-      const save = async () => {
-        if (busy || !canSave) return
+      const save = async (mode = 'normal') => {
+        const nextForce = mode === 'force' ? true : forceOn
+        const tooShortForForce = value.length > 0 && value.length < MIN_FORCE_REDACTABLE_VALUE
+        if (mode === 'normal' && (tooShortForForce || (value.length > 0 && value.length < MIN_REDACTABLE_VALUE && nextForce !== true))) {
+          setShortGate({ length: value.length })
+          return
+        }
+        const nextDirty = nextForce !== (item.forceRedact === true)
+        if (busy || !(value.length > 0 || scopeChanged || nextDirty)) return
+        setShortGate(null)
         setBusy(true)
         setError(null)
         try {
+          if (nextDirty && onForceRedact !== undefined) {
+            await onForceRedact(nextForce)
+            setForceOn(nextForce)
+          }
           if (value.length > 0) await remote.credentials.set(item.ref, value)
           if (canEditScope === true && onSave !== undefined) {
             await onSave({ availability: scope.all ? 'all' : [...scope.ids] })
@@ -493,33 +588,45 @@ window.__ModuleLoader__.load({
       // Same grid as the read view: nothing moves; the env text becomes the
       // value input on the same line, and the scope chip becomes the picker.
       if (editing) {
-        return h('div', { style: S.divider },
-          h('div', { style: S.row },
-            h('div', { style: S.nameCell },
-              h('span', { style: S.name, title: item.name }, item.name),
-              h('input', {
-                type: 'password',
-                autoComplete: 'off',
-                'aria-label': t('field.value'),
-                placeholder: hasValue ? t('action.replaceValue') : t('action.setValue'),
-                value,
-                autoFocus: true,
-                onChange: (event) => setValue(event.target.value),
-                onKeyDown: (event) => {
-                  if (event.key === 'Enter') save()
-                  if (event.key === 'Escape' && menuOpen === false) cancel()
-                },
-                style: { ...S.input, flex: '1 1 60px', height: 22, padding: '0 8px', fontSize: 12, borderRadius: 6 },
-              })),
-            canEditScope === true
-              ? h(ScopeSelect, { t, workspaces: projects, scope, onChange: setScope, onOpenChange: setMenuOpen, compact: true })
-              : h('span', { style: S.badge, title: badgeTitle }, badge ?? t(`source.${item.source}`)),
-            h('span', { style: hasValue ? S.stateSet : S.stateUnset }, hasValue ? t('state.set') : t('state.unset')),
-            h(Switch, { checked, onChange: onToggle, label: item.name, disabled: toggleDisabled === true }),
-            h('div', { style: S.actions },
-              h(Button, { onClick: save, primary: true, disabled: busy || !canSave }, t('action.save')),
-              h(Button, { onClick: cancel, disabled: busy }, t('action.cancel')))),
-          error === null ? null : h('div', { style: { ...S.error, padding: '0 14px 8px' } }, error))
+        return h(React.Fragment, null,
+          h('div', { style: S.divider },
+            h('div', { style: S.row },
+              h('div', { style: S.nameCell },
+                h('span', { style: S.name, title: item.name }, item.name),
+                h('input', {
+                  type: 'password',
+                  autoComplete: 'off',
+                  'aria-label': t('field.value'),
+                  placeholder: hasValue ? t('action.replaceValue') : t('action.setValue'),
+                  value,
+                  autoFocus: true,
+                  onChange: (event) => { setValue(event.target.value); setShortGate(null) },
+                  onKeyDown: (event) => {
+                    if (event.key === 'Enter') save()
+                    if (event.key === 'Escape' && menuOpen === false && shortGate === null) cancel()
+                  },
+                  style: { ...S.input, flex: '1 1 60px', height: 22, padding: '0 8px', fontSize: 12, borderRadius: 6 },
+                })),
+              canEditScope === true
+                ? h(ScopeSelect, { t, workspaces: projects, scope, onChange: setScope, onOpenChange: setMenuOpen, compact: true })
+                : h('span', { style: S.badge, title: badgeTitle }, badge ?? t(`source.${item.source}`)),
+              h('label', { style: S.forceCheck, title: t('warn.shortValueForce') },
+                h('input', { type: 'checkbox', checked: forceOn, onChange: (event) => setForceOn(event.target.checked) }),
+                t('field.forceRedact')),
+              h(Switch, { checked, onChange: onToggle, label: item.name, disabled: toggleDisabled === true }),
+              h('div', { style: S.actions },
+                h(Button, { onClick: () => save(), primary: true, disabled: busy || !canSave }, t('action.save')),
+                h(Button, { onClick: cancel, disabled: busy }, t('action.cancel')))),
+            error === null ? null : h('div', { style: { ...S.error, padding: '0 14px 8px' } }, error)),
+          shortGate === null ? null : h(ShortValueDialog, {
+            t,
+            length: shortGate.length,
+            scope: 'save',
+            busy,
+            onClose: () => setShortGate(null),
+            onAnyway: () => save('anyway'),
+            onForce: () => save('force'),
+          }))
       }
 
       return h('div', { style: S.divider },
@@ -528,7 +635,12 @@ window.__ModuleLoader__.load({
             h('span', { style: S.name, title: item.name }, item.name),
             h('span', { style: S.env, title: `$${item.envName}` }, `$${item.envName}`)),
           h('span', { style: S.badge, title: badgeTitle }, badge ?? t(`source.${item.source}`)),
-          h('span', { style: hasValue ? S.stateSet : S.stateUnset }, hasValue ? t('state.set') : t('state.unset')),
+          item.set === false || item.redaction === undefined
+            ? h('span', { style: hasValue ? S.stateSet : S.stateUnset }, hasValue ? t('state.set') : t('state.unset'))
+            : h('span', {
+              style: redactionStyle(item.redaction),
+              title: t(REDACTION_HINT[item.redaction] ?? 'warn.shortValueForce'),
+            }, t(REDACTION_LABEL[item.redaction] ?? 'field.redactForced')),
           h(Switch, { checked, onChange: onToggle, label: item.name, disabled: toggleDisabled === true }),
           h('div', { style: S.actions },
             canEditValue === false
@@ -539,6 +651,11 @@ window.__ModuleLoader__.load({
             canDelete === true
               ? h(Button, { danger: true, onClick: onDelete, title: t('action.delete') }, '✕')
               : h('span', { style: { width: CONTROL, flex: 'none' } }))))
+    }
+
+    /** Centered page column: matches the shipped panels (max width 960px). */
+    function Page({ children }) {
+      return h('div', { style: S.page }, h('div', { style: S.pageBody }, children))
     }
 
     function PageHeader({ t, title, summary, onRefresh }) {
@@ -560,13 +677,20 @@ window.__ModuleLoader__.load({
       const [scope, setScope] = React.useState({ all: true, ids: [] })
       const [defaultOn, setDefaultOn] = React.useState(false)
       const [failure, setFailure] = React.useState(null)
+      const [shortGate, setShortGate] = React.useState(null)
 
-      const add = async () => {
+      const add = async (mode = 'normal') => {
         setFailure(null)
+        if (mode === 'normal' && value.length > 0 && value.length < MIN_REDACTABLE_VALUE) {
+          setShortGate({ length: value.length })
+          return
+        }
+        setShortGate(null)
         let ref
         try {
           const created = await request('', { method: 'POST', body: JSON.stringify({
             op: 'addGlobal', name, availability: scope.all ? 'all' : [...scope.ids], enabledByDefault: defaultOn,
+            forceRedact: mode === 'force',
           }) })
           ref = created?.global?.ref
         } catch (error) {
@@ -616,7 +740,7 @@ window.__ModuleLoader__.load({
       }
       const globals = data?.globals ?? []
       const enabledCount = globals.filter((global) => global.enabledByDefault).length
-      return h('div', { style: S.page },
+      return h(Page, null,
         h(PageHeader, { t, title: t('panel.title'), summary: fill(t('count.enabled'), { enabled: enabledCount, total: globals.length }), onRefresh: reload }),
         h('p', { style: S.subtitle }, t('notice.values')),
         h('div', { style: S.addRow },
@@ -634,14 +758,22 @@ window.__ModuleLoader__.load({
               type: 'password',
               autoComplete: 'off',
               value,
-              onChange: (event) => setValue(event.target.value),
+              onChange: (event) => { setValue(event.target.value); setShortGate(null) },
               style: { ...S.input, flex: '1 1 160px', width: 'auto', minWidth: 140, maxWidth: 280 },
             })),
           h('div', { style: S.inlineField },
             h('span', { style: S.inlineLabel }, t('field.availability')),
             h(ScopeSelect, { t, workspaces, scope, onChange: setScope })),
           h('label', { style: S.check }, h('input', { type: 'checkbox', checked: defaultOn, onChange: (event) => setDefaultOn(event.target.checked) }), t('field.enabled')),
-          h(Button, { onClick: add, primary: true, disabled: name.trim().length === 0 }, t('action.add'))),
+          h(Button, { onClick: () => add(), primary: true, disabled: name.trim().length === 0 }, t('action.add'))),
+        shortGate === null ? null : h(ShortValueDialog, {
+          t,
+          length: shortGate.length,
+          scope: 'add',
+          onClose: () => setShortGate(null),
+          onAnyway: () => add('anyway'),
+          onForce: () => add('force'),
+        }),
         h(ErrorLine, null, failure),
         h(ErrorLine, null, error === null ? null : `${t('error.load')}: ${error}`),
         h('div', { style: S.card },
@@ -657,6 +789,9 @@ window.__ModuleLoader__.load({
               checked: global.enabledByDefault,
               onToggle: (next) => toggle(global, next),
               onDelete: () => remove(global.id),
+              onForceRedact: (enabled) => request('', { method: 'POST', body: JSON.stringify({
+                op: 'setForceRedact', source: 'global', id: global.id, enabled,
+              }) }),
               onSave: (next) => request('', { method: 'POST', body: JSON.stringify({
                 op: 'updateGlobal', id: global.id, name: global.name,
                 availability: next.availability, enabledByDefault: global.enabledByDefault,
@@ -682,13 +817,22 @@ window.__ModuleLoader__.load({
       const [value, setValue] = React.useState('')
       const [enabledOn, setEnabledOn] = React.useState(true)
       const [failure, setFailure] = React.useState(null)
+      const [shortGate, setShortGate] = React.useState(null)
       const close = React.useCallback(() => dialog.set({ open: false, workspaceId: null, title: '' }), [dialog])
 
-      const add = async () => {
+      const add = async (mode = 'normal') => {
         setFailure(null)
+        if (mode === 'normal' && value.length > 0 && value.length < MIN_REDACTABLE_VALUE) {
+          setShortGate({ length: value.length })
+          return
+        }
+        setShortGate(null)
         let ref
         try {
-          const created = await request('', { method: 'POST', body: JSON.stringify({ op: 'addWorkspaceVar', workspaceId, name, enabledByDefault: enabledOn }) })
+          const created = await request('', { method: 'POST', body: JSON.stringify({
+            op: 'addWorkspaceVar', workspaceId, name, enabledByDefault: enabledOn,
+            forceRedact: mode === 'force',
+          }) })
           ref = created?.variable?.ref
         } catch (error) {
           setFailure(failureText(t, error))
@@ -721,6 +865,7 @@ window.__ModuleLoader__.load({
         checked: variable.override ?? variable.enabledByDefault,
         toggle: (next) => mutate({ op: 'setWorkspaceOverride', workspaceId, variableId: variable.id, enabled: next }),
         remove: () => mutate({ op: 'removeWorkspaceVar', workspaceId, id: variable.id }),
+        setForce: (enabled) => mutate({ op: 'setForceRedact', source: 'workspace', workspaceId, id: variable.id, enabled }),
       }))
       const globalRows = (data?.globals ?? []).map((global) => ({
         item: { ...global, source: 'global' },
@@ -731,7 +876,7 @@ window.__ModuleLoader__.load({
         .map((source) => ({ source, rows: source === 'workspace' ? workspaceRows : globalRows }))
         .filter((group) => group.rows.length > 0)
 
-      return h(Dialog, { open: state.open, title: `${t('panel.title')} · ${t('source.workspace')}`, onClose: close },
+      return h(Dialog, { open: state.open, title: `${t('panel.title')} · ${t('source.workspace')}`, onClose: close, wide: true },
         h('p', { style: S.subtitle }, state.title ?? ''),
         h('div', { style: S.addRow },
           h('label', { style: S.inlineField },
@@ -748,11 +893,19 @@ window.__ModuleLoader__.load({
               type: 'password',
               autoComplete: 'off',
               value,
-              onChange: (event) => setValue(event.target.value),
+              onChange: (event) => { setValue(event.target.value); setShortGate(null) },
               style: { ...S.input, flex: '1 1 140px', width: 'auto', minWidth: 120, maxWidth: 240 },
             })),
           h('label', { style: S.check }, h('input', { type: 'checkbox', checked: enabledOn, onChange: (event) => setEnabledOn(event.target.checked) }), t('field.enabled')),
-          h(Button, { primary: true, disabled: name.trim().length === 0, onClick: add }, t('action.add'))),
+          h(Button, { primary: true, disabled: name.trim().length === 0, onClick: () => add() }, t('action.add'))),
+        shortGate === null ? null : h(ShortValueDialog, {
+          t,
+          length: shortGate.length,
+          scope: 'add',
+          onClose: () => setShortGate(null),
+          onAnyway: () => add('anyway'),
+          onForce: () => add('force'),
+        }),
         h(ErrorLine, null, failure),
         h(ErrorLine, null, error === null ? null : `${t('error.load')}: ${error}`),
         h('div', { style: S.card },
@@ -772,6 +925,7 @@ window.__ModuleLoader__.load({
                 checked: row.checked,
                 onToggle: row.toggle,
                 onDelete: row.remove,
+                onForceRedact: row.setForce,
                 onChanged: reload,
                 canDelete: row.remove !== undefined,
                 canEditValue: row.item.source === 'workspace',
@@ -790,6 +944,7 @@ window.__ModuleLoader__.load({
       const [value, setValue] = React.useState('')
       const [enabledOn, setEnabledOn] = React.useState(true)
       const [failure, setFailure] = React.useState(null)
+      const [shortGate, setShortGate] = React.useState(null)
       const [onlyEnabled, setOnlyEnabled] = React.useState(false)
 
       const items = data?.items ?? []
@@ -797,11 +952,19 @@ window.__ModuleLoader__.load({
       const total = data?.total ?? 0
       const visible = onlyEnabled ? items.filter((item) => item.enabled) : items
 
-      const add = async () => {
+      const add = async (mode = 'normal') => {
         setFailure(null)
+        if (mode === 'normal' && value.length > 0 && value.length < MIN_REDACTABLE_VALUE) {
+          setShortGate({ length: value.length })
+          return
+        }
+        setShortGate(null)
         let ref
         try {
-          const created = await request('', { method: 'POST', body: JSON.stringify({ op: 'addSessionVar', sessionId, name, enabledByDefault: enabledOn }) })
+          const created = await request('', { method: 'POST', body: JSON.stringify({
+            op: 'addSessionVar', sessionId, name, enabledByDefault: enabledOn,
+            forceRedact: mode === 'force',
+          }) })
           ref = created?.variable?.ref
         } catch (error) {
           setFailure(failureText(t, error))
@@ -829,7 +992,7 @@ window.__ModuleLoader__.load({
         }
       }
 
-      return h('div', { style: S.page },
+      return h(Page, null,
         h(PageHeader, { t, title: t('panel.title'), summary: fill(t('count.enabled'), { enabled, total }), onRefresh: reload }),
         h('div', { style: S.addRow },
           h('label', { style: S.inlineField },
@@ -846,11 +1009,19 @@ window.__ModuleLoader__.load({
               type: 'password',
               autoComplete: 'off',
               value,
-              onChange: (event) => setValue(event.target.value),
+              onChange: (event) => { setValue(event.target.value); setShortGate(null) },
               style: { ...S.input, flex: '1 1 140px', width: 'auto', minWidth: 120, maxWidth: 240 },
             })),
           h('label', { style: S.check }, h('input', { type: 'checkbox', checked: enabledOn, onChange: (event) => setEnabledOn(event.target.checked) }), t('field.enabled')),
-          h(Button, { primary: true, disabled: name.trim().length === 0, onClick: add }, t('action.add'))),
+          h(Button, { primary: true, disabled: name.trim().length === 0, onClick: () => add() }, t('action.add'))),
+        shortGate === null ? null : h(ShortValueDialog, {
+          t,
+          length: shortGate.length,
+          scope: 'add',
+          onClose: () => setShortGate(null),
+          onAnyway: () => add('anyway'),
+          onForce: () => add('force'),
+        }),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 } },
           h('label', { style: { ...S.check, height: 'auto' } },
             h('input', { type: 'checkbox', checked: onlyEnabled, onChange: (event) => setOnlyEnabled(event.target.checked) }),
@@ -881,6 +1052,7 @@ window.__ModuleLoader__.load({
                   checked: item.enabled,
                   onToggle: (next) => mutate({ op: 'setSessionOverride', sessionId, variableId: item.id, enabled: next }),
                   onDelete: () => mutate({ op: 'removeSessionVar', sessionId, id: item.id }),
+                  onForceRedact: (enabled) => mutate({ op: 'setForceRedact', source: 'session', sessionId, id: item.id, enabled }),
                   onChanged: reload,
                   canDelete: item.source === 'session',
                   canEditValue: item.source === 'session',
@@ -900,7 +1072,7 @@ window.__ModuleLoader__.load({
 
     function SessionView(props) {
       const sessionId = props.sessionId
-      if (sessionId === undefined) return h('div', { style: S.page }, 'No session')
+      if (sessionId === undefined) return h(Page, null, 'No session')
       return h(SessionPanel, { ...props, sessionId })
     }
 
