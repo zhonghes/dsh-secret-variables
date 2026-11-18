@@ -50,7 +50,11 @@
     "availability": "生效范围",
     "availabilityAll": "全部项目",
     "availabilitySome": "仅指定项目",
-    "enabled": "创建后启用"
+    "enabled": "创建后启用",
+    "overridden": "被覆盖"
+  },
+  "hint": {
+    "overridden": "更具体的同名变量已启用，这条不会被注入，开关也不可用"
   },
   "empty": {
     "globals": "还没有全局变量。",

@@ -12,10 +12,11 @@
 ## Development
 
 ```sh
-node --test test/*.test.js
+npm install   # test dependencies only (React / happy-dom)
+npm test      # host logic + UI smoke tests
 ```
 
-There is no build step. `client.js` runs directly in the Harness web UI; `src/` is plain ESM for the Host half.
+The host suite needs no dependencies at all: `node --test test/*.test.js`. There is no build step. `client.js` runs directly in the Harness web UI; `src/` is plain ESM for the Host half.
 
 When you change the Host half, re-enable the plugin in the plugin manager to reload it; when you change `client.js`, refresh the page.
 
@@ -25,7 +26,7 @@ Short imperative subject, a blank line, then why the change is needed. English o
 
 ## Pull request checklist
 
-- [ ] `node --test test/*.test.js` passes
+- [ ] `npm test` passes (or `node --test test/*.test.js` without installing dependencies)
 - [ ] No real credentials, tokens, or personal paths in the diff
 - [ ] Docs updated when behavior or the threat model changes
 - [ ] `README.md` and `README.en.md` updated together when user-facing behavior changes

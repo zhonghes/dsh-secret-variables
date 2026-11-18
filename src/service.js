@@ -9,6 +9,7 @@ import {
   effectiveVariables,
   envNamesFor,
   requireName,
+  resolveVariables,
   sanitizeName,
   SecretVariablesError,
 } from './core.js'
@@ -279,6 +280,12 @@ export function createSecretVariables({
     const ids = [...snapshot.globals.map((item) => item.id), ...record.variables.map((item) => item.id)]
     const stored = await describeRefs(ids)
     const masks = await redactionsFor([...snapshot.globals, ...record.variables])
+    // A project variable wins over a global with the same normalized name, but
+    // only while both sides are enabled: turning the project one off falls
+    // back to the global, which is what the session resolver does too.
+    const projectEnabled = new Map(record.variables
+      .map((item) => [sanitizeName(item.name), record.overrides[item.id] ?? item.enabledByDefault])
+      .filter(([name]) => name !== null))
     const decorate = (item) => ({
       ...item,
       envName: envNames.get(item.id),
@@ -288,11 +295,17 @@ export function createSecretVariables({
       override: record.overrides[item.id] ?? null,
       effective: record.overrides[item.id] ?? item.enabledByDefault,
     })
+    const shadowOf = (global) => {
+      const globalEnabled = record.overrides[global.id] ?? global.enabledByDefault
+      return globalEnabled === true && projectEnabled.get(sanitizeName(global.name)) === true
+        ? { overridden: true, overriddenBy: 'workspace' }
+        : {}
+    }
     return {
       workspaceId: key,
       globals: snapshot.globals
         .filter((global) => global.availability === 'all' || global.availability.includes(key))
-        .map(decorate)
+        .map((global) => ({ ...decorate(global), ...shadowOf(global) }))
         .sort((left, right) => left.name.localeCompare(right.name)),
       variables: record.variables.map(decorate).sort((left, right) => left.name.localeCompare(right.name)),
     }
@@ -348,17 +361,19 @@ export function createSecretVariables({
   async function getSession(sessionId, workspaceId) {
     const snapshot = await load()
     const scope = scopeOf(sessionId, workspaceId)
-    const items = effectiveVariables(snapshot, scope)
-    const stored = await describeRefs(items.map((item) => item.id))
-    const masks = await redactionsFor(items)
-    const rows = items.map((item) => ({
+    const { effective, shadowed } = resolveVariables(snapshot, scope)
+    const definitions = [...effective, ...shadowed]
+    const stored = await describeRefs(definitions.map((item) => item.id))
+    const masks = await redactionsFor(definitions)
+    const rows = definitions.map((item) => ({
       ...item,
       ref: refOf(item.id),
       set: stored[item.id] === true,
       redaction: masks.get(item.id),
     }))
+    const autoRows = []
     for (const entry of autoEntries(scope.sessionId)) {
-      rows.push({
+      autoRows.push({
         id: `auto:${entry.name}`,
         name: entry.name,
         source: 'auto',
@@ -372,9 +387,11 @@ export function createSecretVariables({
     return {
       sessionId: scope.sessionId,
       workspaceId: scope.workspaceId,
-      items: rows,
-      enabledCount: rows.filter((row) => row.enabled).length,
-      total: rows.length,
+      items: [...rows, ...autoRows],
+      // Only definitions that actually inject count as enabled; shadowed rows
+      // are listed for context but never contribute to the injected set.
+      enabledCount: [...effective, ...autoRows].filter((row) => row.enabled).length,
+      total: rows.length + autoRows.length,
     }
   }
 

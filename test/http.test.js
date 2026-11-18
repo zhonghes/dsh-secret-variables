@@ -181,3 +181,25 @@ test('T-H16 the route reports the masking state and never the value', async () =
   assert.equal(body.data.globals[0].redaction, 'auto')
   assert.equal(JSON.stringify(body).includes('abcdefghijkl'), false)
 })
+
+test('T-H17 the session response marks shadowed definitions', async () => {
+  const { service, handler } = build()
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  await service.addSessionVariable('s1', { name: 'SHARED' })
+  const body = await (await handler(url('op=session&sessionId=s1'))).json()
+  const shadowed = body.data.items.filter((row) => row.overridden === true)
+  assert.equal(shadowed.length, 1)
+  assert.equal(shadowed[0].source, 'global')
+  assert.equal(shadowed[0].overriddenBy, 'session')
+})
+
+test('T-H18 the workspace response marks a global shadowed by a project variable', async () => {
+  const { service, handler } = build()
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  await service.addWorkspaceVariable('w1', { name: 'SHARED' })
+  const body = await (await handler(url('op=workspace&workspaceId=w1'))).json()
+  const global = body.data.globals.find((row) => row.name === 'SHARED')
+  assert.equal(global.overridden, true)
+  assert.equal(global.overriddenBy, 'workspace')
+  assert.equal('overridden' in body.data.variables[0], false)
+})

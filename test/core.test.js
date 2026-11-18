@@ -8,6 +8,7 @@ import {
   emptySnapshot,
   normalizeSnapshot,
   requireName,
+  resolveVariables,
   sanitizeName,
 } from '../src/core.js'
 
@@ -147,6 +148,108 @@ test('T-R14 the same name at three scopes resolves to one item, session first', 
   const items = effectiveVariables(snapshot, { workspaceId: 'w1', sessionId: 's1' })
   assert.equal(items.length, 1)
   assert.equal(items[0].source, 'session')
+})
+
+test('T-R14b resolveVariables keeps the shadowed definitions', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'SHARED', availability: 'all', enabledByDefault: true, createdAt: 1 }],
+    workspaces: { w1: { overrides: {}, variables: [{ id: 'wv1', name: 'SHARED', createdAt: 2 }] } },
+    sessions: { s1: { overrides: {}, variables: [{ id: 'sv1', name: 'SHARED', createdAt: 3 }] } },
+  })
+  const { effective, shadowed } = resolveVariables(snapshot, { workspaceId: 'w1', sessionId: 's1' })
+  assert.equal(effective.length, 1)
+  assert.equal(effective[0].source, 'session')
+  assert.deepEqual(shadowed.map((item) => item.source).sort(), ['global', 'workspace'])
+  assert.equal(shadowed.every((item) => item.overridden === true), true)
+  assert.equal(shadowed.every((item) => item.overriddenBy === 'session'), true)
+})
+
+test('T-R14c shadowing compares normalized names', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'shared', availability: 'all', createdAt: 1 }],
+    workspaces: { w1: { overrides: {}, variables: [{ id: 'wv1', name: 'SHARED', createdAt: 2 }] } },
+    sessions: {},
+  })
+  const { effective, shadowed } = resolveVariables(snapshot, { workspaceId: 'w1', sessionId: 's1' })
+  assert.equal(effective.length, 1)
+  assert.equal(effective[0].source, 'workspace')
+  assert.deepEqual(shadowed.map((item) => item.id), ['g1'])
+})
+
+test('T-R14d a global restricted to another project is not shadowed', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'SHARED', availability: ['w2'], createdAt: 1 }],
+    workspaces: { w1: { overrides: {}, variables: [{ id: 'wv1', name: 'SHARED', createdAt: 2 }] } },
+    sessions: {},
+  })
+  const { effective, shadowed } = resolveVariables(snapshot, { workspaceId: 'w1', sessionId: 's1' })
+  assert.equal(effective.length, 1)
+  assert.equal(effective[0].source, 'workspace')
+  assert.deepEqual(shadowed, [])
+})
+
+test('T-R14e a duplicate inside one scope keeps the later definition', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [
+      { id: 'g1', name: 'DUP', availability: 'all', createdAt: 1 },
+      { id: 'g2', name: 'DUP', availability: 'all', createdAt: 2 },
+    ],
+    workspaces: {},
+    sessions: {},
+  })
+  const { effective, shadowed } = resolveVariables(snapshot, { sessionId: 's1' })
+  assert.equal(effective.length, 1)
+  assert.equal(effective[0].id, 'g2')
+  assert.deepEqual(shadowed.map((item) => item.id), ['g1'])
+  assert.equal(shadowed[0].overridden, false)
+  assert.equal(shadowed[0].overriddenBy, undefined)
+})
+
+test('T-R14f a disabled narrower definition falls back to the wider enabled one', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'SHARED', availability: 'all', enabledByDefault: true, createdAt: 1 }],
+    workspaces: { w1: { overrides: {}, variables: [{ id: 'wv1', name: 'SHARED', enabledByDefault: false, createdAt: 2 }] } },
+    sessions: { s1: { overrides: {}, variables: [{ id: 'sv1', name: 'SHARED', enabledByDefault: false, createdAt: 3 }] } },
+  })
+  const { effective, shadowed } = resolveVariables(snapshot, { workspaceId: 'w1', sessionId: 's1' })
+  assert.equal(effective.length, 1)
+  assert.equal(effective[0].id, 'g1')
+  assert.equal(effective[0].enabled, true)
+  assert.deepEqual(shadowed.map((item) => item.id).sort(), ['sv1', 'wv1'])
+  assert.equal(shadowed.every((item) => item.overridden === false), true)
+})
+
+test('T-R14g a disabled middle definition falls back to the global', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'SHARED', availability: 'all', enabledByDefault: true, createdAt: 1 }],
+    workspaces: { w1: { overrides: {}, variables: [{ id: 'wv1', name: 'SHARED', enabledByDefault: false, createdAt: 2 }] } },
+    sessions: {},
+  })
+  const { effective, shadowed } = resolveVariables(snapshot, { workspaceId: 'w1', sessionId: 's1' })
+  assert.equal(effective[0].id, 'g1')
+  assert.equal(effective[0].enabled, true)
+  assert.deepEqual(shadowed.map((item) => item.id), ['wv1'])
+  assert.equal(shadowed[0].overridden, false)
+})
+
+test('T-R14h when every definition is off nothing is marked overridden', () => {
+  const snapshot = normalizeSnapshot({
+    version: 1,
+    globals: [{ id: 'g1', name: 'SHARED', availability: 'all', createdAt: 1 }],
+    workspaces: { w1: { overrides: {}, variables: [{ id: 'wv1', name: 'SHARED', enabledByDefault: false, createdAt: 2 }] } },
+    sessions: {},
+  })
+  const { effective, shadowed } = resolveVariables(snapshot, { workspaceId: 'w1', sessionId: 's1' })
+  assert.equal(effective.length, 1)
+  assert.equal(effective[0].id, 'wv1')
+  assert.equal(effective[0].enabled, false)
+  assert.equal(shadowed.every((item) => item.overridden === false), true)
 })
 
 test('T-N10 the same name keeps one env name across scopes', () => {

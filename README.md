@@ -50,13 +50,15 @@ DeepSeek Harness 插件：让密钥不出现在模型的上下文里。
 
 <a href="docs/images/project.png"><img src="docs/images/project.png" width="860" alt="示意图：项目弹窗，标题下方显示项目名，分「本项目变量」与「全局变量」两组"></a>
 
-弹窗标题下方显示项目名。本项目变量可直接改值、删除；全局变量只显示开关和「请在所属页修改」。
+弹窗标题下方显示项目名。本项目变量可直接改值、删除；全局变量只显示开关和「请在所属页修改」。本项目变量与全局变量同名且两者都启用时，全局那条会标为「被覆盖」。
 
 ### 会话页（对话 | 轨迹 | 密钥管理）
 
 <a href="docs/images/session.png"><img src="docs/images/session.png" width="860" alt="示意图：会话页的密钥管理标签页，包含本会话、本项目、全局与自动检测四个分组"></a>
 
 分组依次是「本会话变量 / 本项目变量 / 全局变量 / 自动检测」，标题右侧带数量和一句说明；没有内容的分组不显示，「自动检测」例外——无命中时会显示触发条件提示。「自动检测」里的 `AUTO_n` 就是从对话里识别出来、只存在本次会话内存里的兜底变量。
+
+同名变量按会话 → 项目 → 全局取最具体的**启用**项；更具体的那条关闭时，会自动落到下一层。已启用但输给更具体启用项的定义会显示为「被覆盖」（置灰、开关不可用），不参与注入和提示词。
 
 添加行下方还有「只看已启用」过滤，只列出本会话里开着的变量。
 
@@ -115,7 +117,7 @@ curl -s -H "Authorization: Bearer $DSH_SECRET_OPENAI_API_KEY" https://api.exampl
 | 会话 | 会话标签页 | 落盘；会话销毁后不再可用，元数据不会自动清理 |
 | 自动 | 对话中识别 | 仅进程内存（每会话默认 ≤16 条） |
 
-按归一化名称（忽略大小写）从会话 → 项目 → 全局解析，越具体优先级越高；同一作用域内不允许同名。
+按归一化名称（忽略大小写）从会话 → 项目 → 全局解析，取最具体的**启用**项；更具体的那条关闭时自动落到下一层。同一作用域内不允许同名。
 
 ## 安全模型
 
@@ -124,10 +126,11 @@ curl -s -H "Authorization: Bearer $DSH_SECRET_OPENAI_API_KEY" https://api.exampl
 ## 开发
 
 ```sh
-node --test test/*.test.js
+npm install   # 只装测试依赖（React / happy-dom）
+npm test
 ```
 
-115 个测试，无第三方依赖，无构建步骤；`client.js` 由 Harness Web 直接加载。见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+137 个测试（Host 逻辑 + UI 冒烟），运行时零依赖，无构建步骤；`client.js` 由 Harness Web 直接加载。只跑 Host 测试可以不装依赖：`node --test test/*.test.js`。见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 许可证
 

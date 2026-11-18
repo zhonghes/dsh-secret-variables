@@ -56,6 +56,8 @@ window.__ModuleLoader__.load({
         'field.allProjects': '全部项目',
         'field.defaultOn': '默认启用',
         'field.enabled': '创建后启用',
+        'field.overridden': '被覆盖',
+        'hint.overridden': '更具体的同名变量已启用，这条不会被注入，开关也不可用',
         'notice.scopes': '全局行的开关是该密钥在全部项目中的默认状态；项目与会话行分别覆盖它。',
         'scope.noProjects': '还没有项目可选，请先在工作区里创建项目。',
         'empty.globals': '还没有全局密钥。',
@@ -120,6 +122,8 @@ window.__ModuleLoader__.load({
         'field.allProjects': 'All projects',
         'field.defaultOn': 'Enabled by default',
         'field.enabled': 'Enable after adding',
+        'field.overridden': 'Overridden',
+        'hint.overridden': 'A more specific variable with the same name is enabled; this one is not injected and its switch is disabled',
         'notice.scopes': 'A global row switch is the default for every project; project and session rows override it.',
         'scope.noProjects': 'No project to choose yet; create a workspace first.',
         'empty.globals': 'No global secrets yet.',
@@ -519,7 +523,7 @@ window.__ModuleLoader__.load({
     function SecretRow(props) {
       const {
         t, remote, item, checked, onToggle, onDelete, onSave, onChanged, onForceRedact,
-        canDelete, canEditValue, toggleDisabled, badge, badgeTitle,
+        canDelete, canEditValue, toggleDisabled, badge, badgeTitle, overridden,
         canEditScope, workspaces,
       } = props
       const projects = workspaces ?? []
@@ -630,17 +634,22 @@ window.__ModuleLoader__.load({
       }
 
       return h('div', { style: S.divider },
-        h('div', { style: S.row },
+        h('div', { style: overridden === true ? { ...S.row, opacity: 0.6 } : S.row },
           h('div', { style: S.nameCell },
             h('span', { style: S.name, title: item.name }, item.name),
             h('span', { style: S.env, title: `$${item.envName}` }, `$${item.envName}`)),
           h('span', { style: S.badge, title: badgeTitle }, badge ?? t(`source.${item.source}`)),
-          item.set === false || item.redaction === undefined
-            ? h('span', { style: hasValue ? S.stateSet : S.stateUnset }, hasValue ? t('state.set') : t('state.unset'))
-            : h('span', {
-              style: redactionStyle(item.redaction),
-              title: t(REDACTION_HINT[item.redaction] ?? 'warn.shortValueForce'),
-            }, t(REDACTION_LABEL[item.redaction] ?? 'field.redactForced')),
+          overridden === true
+            ? h('span', {
+              style: { ...S.badge, color: COLOR.warn, borderColor: COLOR.warn },
+              title: t('hint.overridden'),
+            }, t('field.overridden'))
+            : item.set === false || item.redaction === undefined
+              ? h('span', { style: hasValue ? S.stateSet : S.stateUnset }, hasValue ? t('state.set') : t('state.unset'))
+              : h('span', {
+                style: redactionStyle(item.redaction),
+                title: t(REDACTION_HINT[item.redaction] ?? 'warn.shortValueForce'),
+              }, t(REDACTION_LABEL[item.redaction] ?? 'field.redactForced')),
           h(Switch, { checked, onChange: onToggle, label: item.name, disabled: toggleDisabled === true }),
           h('div', { style: S.actions },
             canEditValue === false
@@ -871,6 +880,7 @@ window.__ModuleLoader__.load({
         item: { ...global, source: 'global' },
         checked: global.override ?? global.enabledByDefault,
         toggle: (next) => mutate({ op: 'setWorkspaceOverride', workspaceId, variableId: global.id, enabled: next }),
+        overridden: global.overridden === true,
       }))
       const groups = PROJECT_GROUPS
         .map((source) => ({ source, rows: source === 'workspace' ? workspaceRows : globalRows }))
@@ -929,6 +939,8 @@ window.__ModuleLoader__.load({
                 onChanged: reload,
                 canDelete: row.remove !== undefined,
                 canEditValue: row.item.source === 'workspace',
+                overridden: row.overridden === true,
+                toggleDisabled: row.overridden === true,
               }))))),
         h('p', { style: S.notice }, t('notice.inherited.project')),
         h('p', { style: S.notice }, t('notice.values')))
@@ -950,7 +962,9 @@ window.__ModuleLoader__.load({
       const items = data?.items ?? []
       const enabled = data?.enabledCount ?? 0
       const total = data?.total ?? 0
-      const visible = onlyEnabled ? items.filter((item) => item.enabled) : items
+      const visible = onlyEnabled
+        ? items.filter((item) => item.enabled && item.overridden !== true)
+        : items
 
       const add = async (mode = 'normal') => {
         setFailure(null)
@@ -1056,7 +1070,8 @@ window.__ModuleLoader__.load({
                   onChanged: reload,
                   canDelete: item.source === 'session',
                   canEditValue: item.source === 'session',
-                  toggleDisabled: item.source === 'auto',
+                  overridden: item.overridden === true,
+                  toggleDisabled: item.source === 'auto' || item.overridden === true,
                 }))))),
         h('p', { style: S.notice }, t('notice.inherited')),
         h('p', { style: S.notice }, t('notice.values')))

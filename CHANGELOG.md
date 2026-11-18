@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1 — 2026
+
+- Same-name definitions now resolve to the most specific **enabled** one:
+  turning a narrower definition off falls back to the next layer instead of
+  leaving the name unused.
+- Definitions that lose to an enabled narrower one are listed as **Overridden**
+  (dimmed, switch disabled, tooltip explains why) instead of disappearing;
+  they never contribute to injection or the prompt.
+- New `resolveVariables` keeps the winning definition plus the definitions that
+  did not win; the session view counts only injecting rows as enabled.
+- UI smoke tests (happy-dom) now cover the session view and project dialog
+  wiring; React and happy-dom are test-only devDependencies.
+- 137 tests.
+
 ## 0.2.0 — 2026
 
 - Short values (below 12 characters) now open a save-time dialog that explains the

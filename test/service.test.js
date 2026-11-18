@@ -188,13 +188,17 @@ test('T-F10 redaction is idempotent', async () => {
   assert.equal(twice.changed, false)
 })
 
-test('T-R14 a duplicate name across scopes resolves to one entry', async () => {
+test('T-R14 a duplicate name across scopes keeps the winner and lists the shadowed one', async () => {
   const { service } = build()
-  await service.upsertGlobal({ name: 'SHARED', availability: 'all' })
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
   await service.addWorkspaceVariable('w1', { name: 'SHARED' })
   const items = (await service.getSession('s1', 'w1')).items
-  assert.equal(items.length, 1)
-  assert.equal(items[0].source, 'workspace')
+  assert.equal(items.length, 2)
+  const winner = items.find((row) => row.overridden !== true)
+  assert.equal(winner.source, 'workspace')
+  const shadowed = items.find((row) => row.overridden === true)
+  assert.equal(shadowed.source, 'global')
+  assert.equal(shadowed.overriddenBy, 'workspace')
 })
 
 test('T-R15 a duplicate name inside one scope is rejected', async () => {
@@ -339,4 +343,111 @@ test('T-R20 rows report their masking state without exposing values', async () =
   await values.set(sessionVar.ref, 'vwxyz')
   const view = await service.getSession('s1', 'w1')
   assert.equal(view.items.find((row) => row.name === 'SFORCED').redaction, 'forced')
+})
+
+test('T-P16 shadowed definitions are listed but not counted as enabled', async () => {
+  const { service } = build()
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  await service.addWorkspaceVariable('w1', { name: 'SHARED' })
+  await service.addSessionVariable('s1', { name: 'SHARED' })
+  const view = await service.getSession('s1', 'w1')
+  assert.equal(view.items.length, 3)
+  const winners = view.items.filter((row) => row.overridden !== true)
+  assert.equal(winners.length, 1)
+  assert.equal(winners[0].source, 'session')
+  const shadowed = view.items.filter((row) => row.overridden === true)
+  assert.deepEqual(shadowed.map((row) => row.source).sort(), ['global', 'workspace'])
+  assert.equal(shadowed.every((row) => row.overriddenBy === 'session'), true)
+  assert.equal(view.enabledCount, 1)
+  assert.equal(view.total, 3)
+})
+
+test('T-P17 removing the narrowest definition restores the wider one', async () => {
+  const { service } = build()
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all' })
+  const sessionVar = await service.addSessionVariable('s1', { name: 'SHARED' })
+  let view = await service.getSession('s1', 'w1')
+  assert.equal(view.items.filter((row) => row.overridden === true).length, 0)
+  assert.equal(view.items.find((row) => row.source === 'global').overridden, false)
+  await service.removeSessionVariable('s1', sessionVar.id)
+  view = await service.getSession('s1', 'w1')
+  assert.equal(view.items.length, 1)
+  assert.equal(view.items[0].source, 'global')
+  assert.equal(view.items[0].overridden, undefined)
+})
+
+test('T-P16b a disabled session definition falls back to the global', async () => {
+  const { service } = build()
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  await service.addSessionVariable('s1', { name: 'SHARED', enabledByDefault: false })
+  const view = await service.getSession('s1', 'w1')
+  const winner = view.items.find((row) => row.source === 'global')
+  assert.equal(winner.enabled, true)
+  const off = view.items.find((row) => row.source === 'session')
+  assert.equal(off.enabled, false)
+  assert.equal(off.overridden, false)
+  assert.equal(view.enabledCount, 1)
+})
+
+test('T-P18 a project variable marks the same-name global as overridden', async () => {
+  const { service } = build()
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  await service.addWorkspaceVariable('w1', { name: 'SHARED' })
+  const workspace = await service.getWorkspace('w1')
+  assert.equal(workspace.globals.length, 1)
+  assert.equal(workspace.globals[0].overridden, true)
+  assert.equal(workspace.globals[0].overriddenBy, 'workspace')
+  assert.equal('overridden' in workspace.variables[0], false)
+})
+
+test('T-P18b a disabled project variable does not mark the global', async () => {
+  const { service } = build()
+  await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  await service.addWorkspaceVariable('w1', { name: 'SHARED', enabledByDefault: false })
+  const workspace = await service.getWorkspace('w1')
+  assert.equal('overridden' in workspace.globals[0], false)
+})
+
+test('T-P19 without duplicates no row is marked', async () => {
+  const { service } = build()
+  await service.upsertGlobal({ name: 'ONLY_GLOBAL', availability: 'all' })
+  await service.addWorkspaceVariable('w1', { name: 'ONLY_PROJECT' })
+  const workspace = await service.getWorkspace('w1')
+  assert.equal('overridden' in workspace.globals[0], false)
+  const view = await service.getSession('s1', 'w1')
+  assert.equal(view.items.every((row) => row.overridden !== true), true)
+  assert.equal(view.enabledCount, view.items.filter((row) => row.enabled).length)
+})
+
+test('T-P20 the injected value follows the most specific enabled definition', async () => {
+  const { service, values } = build()
+  const global = await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  const sessionVar = await service.addSessionVariable('s1', { name: 'SHARED', enabledByDefault: false })
+  await values.set(global.ref, 'global-value')
+  await values.set(sessionVar.ref, 'session-value')
+  let overlay = await service.envOverlay('s1')
+  assert.equal(overlay.DSH_SECRET_SHARED, 'global-value')
+  await service.setSessionOverride('s1', sessionVar.id, true)
+  overlay = await service.envOverlay('s1')
+  assert.equal(overlay.DSH_SECRET_SHARED, 'session-value')
+  await service.setSessionOverride('s1', sessionVar.id, false)
+  overlay = await service.envOverlay('s1')
+  assert.equal(overlay.DSH_SECRET_SHARED, 'global-value')
+})
+
+test('T-P21 an enabled winner without a value blocks the wider value', async () => {
+  const { service, values } = build()
+  const global = await service.upsertGlobal({ name: 'SHARED', availability: 'all', enabledByDefault: true })
+  await values.set(global.ref, 'global-value')
+  await service.addWorkspaceVariable('w1', { name: 'SHARED' })
+  const view = await service.getSession('s1', 'w1')
+  const winner = view.items.find((row) => row.overridden !== true)
+  assert.equal(winner.source, 'workspace')
+  assert.equal(winner.enabled, true)
+  assert.equal(winner.set, false)
+  assert.equal(view.items.find((row) => row.source === 'global').overridden, true)
+  // Current semantics: the value-less winner still wins, so nothing injects and
+  // no fallback to the global value happens. The prompt still names the variable.
+  assert.deepEqual(await service.envOverlay('s1'), {})
+  assert.match(service.promptText('s1'), /SHARED/)
 })

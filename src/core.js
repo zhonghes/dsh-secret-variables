@@ -191,20 +191,25 @@ export function envNamesFor(snapshot) {
 }
 
 /**
- * Resolve every variable visible to one session, applying scope precedence.
- * The same sanitized name at several scopes collapses to one entry.
+ * Resolve every variable visible to one session. For each normalized name the
+ * most specific *enabled* definition wins; when every definition is off, the
+ * most specific one still represents the name but never injects. The other
+ * definitions are returned too so callers can show why they are inactive.
  * @param {ReturnType<typeof normalizeSnapshot>} snapshot - stored definitions.
  * @param {{ workspaceId?: string, sessionId: string }} scope - addressed session.
- * @returns {Array<{ id: string, name: string, source: 'global'|'workspace'|'session', envName: string, enabled: boolean, available: boolean, forceRedact: boolean }>}
+ * @returns {{ effective: Array<{ id: string, name: string, source: 'global'|'workspace'|'session', envName: string, enabled: boolean, available: boolean, forceRedact: boolean }>, shadowed: Array<{ id: string, name: string, source: 'global'|'workspace'|'session', envName: string, enabled: boolean, available: boolean, forceRedact: boolean, overridden: boolean, overriddenBy?: 'global'|'workspace'|'session' }> }}
  */
-export function effectiveVariables(snapshot, { workspaceId, sessionId }) {
+export function resolveVariables(snapshot, { workspaceId, sessionId }) {
   const envNames = envNamesFor(snapshot)
   const workspace = workspaceId === undefined ? undefined : snapshot.workspaces[workspaceId]
   const session = snapshot.sessions[sessionId]
-  const byName = new Map()
+  const groups = new Map()
 
   const put = (item) => {
-    byName.set(sanitizeName(item.name) ?? item.id, item)
+    const key = sanitizeName(item.name) ?? item.id
+    const list = groups.get(key) ?? []
+    list.push(item)
+    groups.set(key, list)
   }
 
   for (const global of snapshot.globals) {
@@ -250,5 +255,33 @@ export function effectiveVariables(snapshot, { workspaceId, sessionId }) {
     })
   }
 
-  return [...byName.values()].sort((left, right) => left.name.localeCompare(right.name))
+  const effective = []
+  const shadowed = []
+  for (const list of groups.values()) {
+    const enabled = list.filter((item) => item.enabled)
+    const winner = enabled.length > 0 ? enabled[enabled.length - 1] : list[list.length - 1]
+    effective.push(winner)
+    for (const item of list) {
+      if (item === winner) continue
+      // Only an enabled definition that loses to an enabled narrower one is
+      // marked as overridden; a disabled row is simply off and can be enabled.
+      shadowed.push(item.enabled && winner.enabled
+        ? { ...item, overridden: true, overriddenBy: winner.source }
+        : { ...item, overridden: false })
+    }
+  }
+  effective.sort((left, right) => left.name.localeCompare(right.name))
+  shadowed.sort((left, right) => left.name.localeCompare(right.name))
+  return { effective, shadowed }
+}
+
+/**
+ * Resolve every variable visible to one session, applying scope precedence.
+ * The same sanitized name at several scopes collapses to one entry.
+ * @param {ReturnType<typeof normalizeSnapshot>} snapshot - stored definitions.
+ * @param {{ workspaceId?: string, sessionId: string }} scope - addressed session.
+ * @returns {Array<{ id: string, name: string, source: 'global'|'workspace'|'session', envName: string, enabled: boolean, available: boolean, forceRedact: boolean }>}
+ */
+export function effectiveVariables(snapshot, scope) {
+  return resolveVariables(snapshot, scope).effective
 }

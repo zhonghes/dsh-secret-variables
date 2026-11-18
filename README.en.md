@@ -52,13 +52,15 @@ The masking badge lives in the state column: `Output: auto` (green) means the va
 
 <a href="docs/images/project.png"><img src="docs/images/project.png" width="860" alt="Diagram: project dialog, with the project name under the title and the project and global variable groups"></a>
 
-The project name sits under the title. Project variables can be edited or deleted here; global variables only expose the switch and **Edit at its source**.
+The project name sits under the title. Project variables can be edited or deleted here; global variables only expose the switch and **Edit at its source**. When a project variable shares a name with a global one and both are enabled, the global row is marked **Overridden**.
 
 ### Session tab (Chat | Trajectory | Secrets)
 
 <a href="docs/images/session.png"><img src="docs/images/session.png" width="860" alt="Diagram: session secrets tab with the session, project, global and detected groups"></a>
 
 The groups are session / project / global / detected, each with a count and a one-line hint. Empty groups are hidden — except **Detected**, which explains its trigger when nothing matched yet. An `AUTO_n` under **Detected** is a fallback variable claimed from the conversation; it lives in this process only.
+
+Duplicate names take the most specific **enabled** definition (session → project → global); turning a narrower definition off falls back to the next layer. An enabled definition that loses to a more specific enabled one is listed as **Overridden** (dimmed, switch disabled) and is never injected.
 
 An **Only enabled** filter sits below the add row.
 
@@ -117,7 +119,7 @@ After a hit:
 | Session | conversation tab | stored on disk; unusable after the session is disposed, metadata is not cleaned up automatically |
 | Auto | detected in the conversation | process memory only (default ≤16 per session) |
 
-Resolution goes session → project → global by sanitized name (case-insensitive): a narrower definition overrides a wider one. Within one scope, names must be unique (`a`, `A`, `a!` normalize to the same env name).
+Resolution goes session → project → global by sanitized name (case-insensitive) and takes the most specific **enabled** definition; a narrower one that is off falls back to the next layer. Within one scope, names must be unique (`a`, `A`, `a!` normalize to the same env name).
 
 ## Security model
 
@@ -126,10 +128,11 @@ This plugin prevents **accidental** leakage: registered values stay out of promp
 ## Development
 
 ```sh
-node --test test/*.test.js
+npm install   # test dependencies only (React / happy-dom)
+npm test
 ```
 
-115 tests, no dependencies, no build step. `client.js` is loaded as-is by the Harness web UI. See [CONTRIBUTING.md](CONTRIBUTING.md).
+137 tests (host logic + UI smoke), no runtime dependencies, no build step. `client.js` is loaded as-is by the Harness web UI. The host suite runs without installing anything: `node --test test/*.test.js`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

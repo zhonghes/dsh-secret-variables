@@ -50,7 +50,11 @@
     "availability": "Availability",
     "availabilityAll": "All projects",
     "availabilitySome": "Selected projects only",
-    "enabled": "Enable after adding"
+    "enabled": "Enable after adding",
+    "overridden": "Overridden"
+  },
+  "hint": {
+    "overridden": "A more specific variable with the same name is enabled; this one is not injected and its switch is disabled"
   },
   "empty": {
     "globals": "No global variables yet.",
