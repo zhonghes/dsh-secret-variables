@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-secret-variables",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Scoped secret variables: values stay out of prompts and logs, the model uses them as $DSH_SECRET_* in shell.",

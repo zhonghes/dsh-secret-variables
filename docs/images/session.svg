@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200" viewBox="0 0 1800 1200">
+  <rect width="1800" height="1200" fill="#ffffff"/>
+
+  <text x="90" y="122" font-family="Noto Sans SC, sans-serif" font-size="44" font-weight="700" fill="#23262b">密钥管理</text>
+  <rect x="300" y="88" width="174" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="387" y="118" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#6b7280" text-anchor="middle">已启用 4 / 8</text>
+  <g stroke="#7a8089" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1690 104a15 15 0 1 1-5-11"/>
+    <path d="M1690 86v14h-14"/>
+  </g>
+
+  <text x="90" y="256" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#7a8089">名称</text>
+  <rect x="146" y="222" width="236" height="50" rx="8" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="164" y="255" font-family="JetBrains Mono, monospace" font-size="23" fill="#23262b">SESSION_TOKEN</text>
+
+  <text x="414" y="256" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#7a8089">值</text>
+  <rect x="452" y="222" width="250" height="50" rx="8" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="472" y="256" font-family="Noto Sans SC, sans-serif" font-size="26" letter-spacing="1" fill="#23262b">••••••••</text>
+
+  <rect x="760" y="236" width="24" height="24" rx="4" fill="#3366ff" stroke="#3366ff"/>
+  <path d="M766 248l5 5 9-11" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="796" y="256" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#23262b">创建后启用</text>
+  <rect x="1000" y="222" width="104" height="50" rx="8" fill="#3366ff"/>
+  <text x="1052" y="255" font-family="Noto Sans SC, sans-serif" font-size="25" fill="#ffffff" text-anchor="middle">添加</text>
+
+  <rect x="90" y="318" width="24" height="24" rx="4" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="126" y="338" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#23262b">只看已启用</text>
+  <text x="1710" y="338" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af" text-anchor="end">只有一次性的 bash 与 pwsh 命令会收到这些值。</text>
+
+  <rect x="90" y="380" width="1620" height="700" rx="12" fill="#ffffff" stroke="#d7dbe2"/>
+  <line x1="90" y1="450" x2="1710" y2="450" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="90" y1="555" x2="1710" y2="555" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="90" y1="625" x2="1710" y2="625" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="90" y1="730" x2="1710" y2="730" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="90" y1="800" x2="1710" y2="800" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="90" y1="905" x2="1710" y2="905" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="90" y1="975" x2="1710" y2="975" stroke="#e3e6ea" stroke-width="2"/>
+
+  <text x="120" y="428" font-family="Noto Sans SC, sans-serif" font-size="28" font-weight="700" fill="#23262b">本会话变量</text>
+  <rect x="306" y="404" width="44" height="36" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="328" y="430" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">1</text>
+  <text x="1710" y="428" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af" text-anchor="end">仅本会话可用</text>
+
+  <text x="120" y="518" font-family="JetBrains Mono, monospace" font-size="27" fill="#23262b">SESSION_TOKEN</text>
+  <text x="380" y="518" font-family="JetBrains Mono, monospace" font-size="22" fill="#9ca3af">$DSH_SECRET_SESSION_TOKEN</text>
+  <rect x="960" y="488" width="96" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1008" y="517" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">会话</text>
+  <rect x="1080" y="488" width="196" height="44" rx="6" fill="#eafaf0" stroke="#63b881"/>
+  <text x="1178" y="517" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#2f8a52" text-anchor="middle">输出自动脱敏</text>
+  <rect x="1356" y="496" width="56" height="28" rx="14" fill="#3366ff"/>
+  <circle cx="1398" cy="510" r="11" fill="#ffffff"/>
+  <rect x="1440" y="488" width="120" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1500" y="517" font-family="Noto Sans SC, sans-serif" font-size="23" fill="#23262b" text-anchor="middle">更换值</text>
+  <text x="1630" y="519" font-family="Noto Sans SC, sans-serif" font-size="28" fill="#d64545" text-anchor="middle">✕</text>
+
+  <text x="120" y="603" font-family="Noto Sans SC, sans-serif" font-size="28" font-weight="700" fill="#23262b">本项目变量</text>
+  <rect x="306" y="579" width="44" height="36" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="328" y="605" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">1</text>
+  <text x="1710" y="603" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af" text-anchor="end">本项目内共享</text>
+
+  <text x="120" y="693" font-family="JetBrains Mono, monospace" font-size="27" fill="#23262b">PROJECT_TOKEN</text>
+  <text x="380" y="693" font-family="JetBrains Mono, monospace" font-size="22" fill="#9ca3af">$DSH_SECRET_PROJECT_TOKEN</text>
+  <rect x="960" y="663" width="96" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1008" y="692" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">项目</text>
+  <rect x="1080" y="663" width="196" height="44" rx="6" fill="#fdeeee" stroke="#d98a8a"/>
+  <text x="1178" y="692" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#c23b3b" text-anchor="middle">输出未脱敏</text>
+  <rect x="1356" y="671" width="56" height="28" rx="14" fill="#3366ff"/>
+  <circle cx="1398" cy="685" r="11" fill="#ffffff"/>
+  <text x="1710" y="693" font-family="Noto Sans SC, sans-serif" font-size="23" fill="#9ca3af" text-anchor="end">请在所属页修改</text>
+
+  <text x="120" y="778" font-family="Noto Sans SC, sans-serif" font-size="28" font-weight="700" fill="#23262b">全局变量</text>
+  <rect x="248" y="754" width="44" height="36" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="270" y="780" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">5</text>
+  <text x="1710" y="778" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af" text-anchor="end">所有项目可用，可被项目或会话覆盖</text>
+
+  <text x="120" y="868" font-family="JetBrains Mono, monospace" font-size="27" fill="#23262b">OPENAI_API_KEY</text>
+  <text x="380" y="868" font-family="JetBrains Mono, monospace" font-size="22" fill="#9ca3af">$DSH_SECRET_OPENAI_API_KEY</text>
+  <rect x="960" y="838" width="96" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1008" y="867" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">全局</text>
+  <rect x="1080" y="838" width="196" height="44" rx="6" fill="#eafaf0" stroke="#63b881"/>
+  <text x="1178" y="867" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#2f8a52" text-anchor="middle">输出自动脱敏</text>
+  <rect x="1356" y="846" width="56" height="28" rx="14" fill="#e5e7eb" stroke="#d7dbe2"/>
+  <circle cx="1370" cy="860" r="11" fill="#ffffff"/>
+  <text x="1710" y="868" font-family="Noto Sans SC, sans-serif" font-size="23" fill="#9ca3af" text-anchor="end">请在所属页修改</text>
+
+  <text x="120" y="953" font-family="Noto Sans SC, sans-serif" font-size="28" font-weight="700" fill="#23262b">自动检测</text>
+  <rect x="248" y="929" width="44" height="36" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="270" y="955" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">1</text>
+  <text x="1710" y="953" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af" text-anchor="end">从对话中自动识别，仅本次会话</text>
+
+  <text x="120" y="1043" font-family="JetBrains Mono, monospace" font-size="27" fill="#23262b">AUTO_1</text>
+  <text x="380" y="1043" font-family="JetBrains Mono, monospace" font-size="22" fill="#9ca3af">$DSH_SECRET_AUTO_1</text>
+  <rect x="960" y="1013" width="96" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1008" y="1042" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">自动</text>
+  <text x="1100" y="1043" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#6b7280">已设置</text>
+  <rect x="1356" y="1021" width="56" height="28" rx="14" fill="#e5e7eb" stroke="#d7dbe2"/>
+  <circle cx="1370" cy="1035" r="11" fill="#ffffff"/>
+
+  <text x="90" y="1125" font-family="Noto Sans SC, sans-serif" font-size="25" fill="#4b5563">项目与全局变量在这里只控制本会话的开关；改值请到「全局 / 项目」标签页。</text>
+  <text x="90" y="1167" font-family="Noto Sans SC, sans-serif" font-size="25" fill="#4b5563">自动检测来自对话里出现的未登记密钥，只存在进程内存，会话销毁即失效。</text>
+</svg>

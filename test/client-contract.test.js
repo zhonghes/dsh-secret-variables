@@ -66,12 +66,12 @@ test('T-U8 the session view edits values only for session variables', () => {
   assert.match(client, /hint\.editUpstream/u)
 })
 
-test('T-U9 the project dialog edits values only for project variables', () => {
+test('T-U9 the project page edits values only for project variables', () => {
   assert.match(client, /canEditValue: row\.item\.source === 'workspace'/u)
   assert.match(client, /hint\.editUpstream': '请在所属页修改'/u)
 })
 
-test('T-U10 the project dialog groups project and global variables', () => {
+test('T-U10 the project page groups project and global variables', () => {
   assert.match(client, /const PROJECT_GROUPS = \['workspace', 'global'\]/u)
   assert.match(client, /PROJECT_GROUPS\n\s+\.map\(\(source\)/u)
 })
@@ -145,4 +145,15 @@ test('T-U16 overridden rows are labelled, dimmed and not toggleable', () => {
   assert.match(client, /overridden: row\.overridden === true/u)
   assert.match(client, /toggleDisabled: row\.overridden === true/u)
   assert.match(client, /opacity: 0\.6/u)
+})
+
+test('T-U17 global and project scopes share one sidebar page', () => {
+  assert.match(client, /function SecretsPage\(/u)
+  assert.match(client, /button\('global', t\('source\.global'\)\)/u)
+  assert.match(client, /button\('project', t\('source\.workspace'\)\)/u)
+  assert.match(client, /\}, SecretsPage\)\)/u)
+  // The workspace context menu entry and its overlay dialog are gone.
+  assert.equal(client.includes("name: 'shell.overlay'"), false)
+  assert.equal(client.includes("target: 'workspace'"), false)
+  assert.equal(client.includes('contextMenus'), false)
 })

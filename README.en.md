@@ -20,15 +20,17 @@ You declare a variable once; the model only ever sees `$DSH_SECRET_<NAME>` and t
 
 ## UI entry points
 
-<a href="docs/images/entry.png"><img src="docs/images/entry.png" width="860" alt="Diagram: one app window with the three entry points numbered — sidebar, workspace row menu and conversation tab, mapped to the global, project and session scopes"></a>
-
-All three entries open the same panels with a different scope: the sidebar edits globals, the workspace row manages this project, and the conversation tab only affects the current session. The sidebar entry sits under **Automated tasks**.
+Two separate entries: the sidebar **Secrets** page is the **global / project** entry (its 项目 tab stays inside that entry); the conversation tab is the **session** entry and only affects the current session. They are not merged; the old workspace row "⋯" entry has moved into the sidebar page. The sidebar entry sits under **Automated tasks**.
 
 The images below are diagrams; variable names and values are examples.
 
+<a href="docs/images/entry.png"><img src="docs/images/entry.png" width="860" alt="Diagram: two separate entries — the global / project entry in the sidebar Secrets page on the left, and the session entry in the conversation tab on the right"></a>
+
 ### Global page
 
-<a href="docs/images/global.png"><img src="docs/images/global.png" width="860" alt="Diagram: global page, with the enabled count next to the title, the add row and the variable list"></a>
+<a href="docs/images/global.png"><img src="docs/images/global.png" width="860" alt="Diagram: global page, with the 全局 / 项目 tab strip below the title, the add row and the variable list"></a>
+
+The global and project pages share the title and tabs: refresh sits on the right of the title, the `全局 | 项目` tab strip below it, and the active scope is underlined.
 
 The enabled count sits next to the title. The add row is name, value, availability, **Enable after adding**, and **Add**; **Enable after adding** starts unchecked here and checked on the project and session pages.
 
@@ -46,13 +48,13 @@ The availability picker opens as a dropdown: **All projects** by default, one ch
 
 Names are normalized: upper-cased, non-alphanumeric runs become `_`, leading and trailing underscores are trimmed, and the result is capped at 40 characters — `openai-api-key` and `OPENAI_API_KEY` both yield `OPENAI_API_KEY`; a purely non-Latin name becomes `SECRET_<8-character hash>`. The environment name adds the `DSH_SECRET_` prefix. Duplicate detection runs on the normalized name, so `a`, `A`, and `a!` collide.
 
-The masking badge lives in the state column: `Output: auto` (green) means the value is 12 characters or more and is replaced in output; `Output: forced` (yellow) means the variable opted in and the value has at least 4 characters; `Output: none` (red) means the value is too short (below 12, or below 4 with forced redaction). Injection is never affected. An unset value shows `No value`; `Saved` appears only on auto-detected rows — they have no metadata row, so the UI can only confirm the value lives in this process.
+The masking badge lives in the state column: `Output: auto` (green) means the value is 12 characters or more and forced redaction is off, so occurrences are replaced in output; `Output: forced` (yellow) means the variable opted in and the value has at least 4 characters; `Output: none` (red) means the value is too short (below 12, or below 4 with forced redaction). Injection is never affected. An unset value shows `No value`; `Saved` appears only on auto-detected rows — they have no metadata row, so the UI can only confirm the value lives in this process.
 
-### Project dialog (workspace row "⋯" → Secrets)
+### Project page (sidebar Secrets → 项目)
 
-<a href="docs/images/project.png"><img src="docs/images/project.png" width="860" alt="Diagram: project dialog, with the project name under the title and the project and global variable groups"></a>
+<a href="docs/images/project.png"><img src="docs/images/project.png" width="860" alt="Diagram: project page with the workspace picker and the project / global variable groups"></a>
 
-The project name sits under the title. Project variables can be edited or deleted here; global variables only expose the switch and **Edit at its source**. When a project variable shares a name with a global one and both are enabled, the global row is marked **Overridden**.
+After switching to the 项目 tab below the title, a workspace picker sits above the content; after choosing a project, the page shows its project variables and the global variables available to it. Project variables can be edited or deleted here; global variables only expose the switch and **Edit at its source**. When a project variable shares a name with a global one and both are enabled, the global row is marked **Overridden**.
 
 ### Session tab (Chat | Trajectory | Secrets)
 
@@ -93,12 +95,12 @@ Matching is format-based only — no length or entropy heuristics:
 | Format | Example |
 | --- | --- |
 | PEM private key | `-----BEGIN … PRIVATE KEY-----` |
-| Password inside a URL | `postgres://user:pass@host` |
+| Password inside a URL | `user:password@host` |
 | OpenAI-style key | `sk-…` (20+ characters after `sk-`, contains a digit) |
 | Google API key | `AIza…` |
 | GitHub token / PAT | `ghp_…` / `github_pat_…` |
 | GitLab / npm / HuggingFace | `glpat-…` / `npm_…` / `hf_…` |
-| AWS / Alibaba Cloud / Tencent Cloud | `AKIA…` / `LTAI…` / `AKID…` |
+| AWS / Alibaba Cloud / Tencent Cloud | `AKIA…` / `ASIA…` / `LTAI…` / `AKID…` |
 | Slack / Stripe / Webhook | `xoxb-…` / `sk_live_…` / `whsec_…` |
 | JWT | `eyJ….eyJ….…` |
 
@@ -114,8 +116,8 @@ After a hit:
 
 | Scope | Where | Lifetime |
 | --- | --- | --- |
-| Global | sidebar 密钥管理 | until deleted, stored on disk |
-| Project | workspace "⋯" menu | until deleted, stored on disk |
+| Global | sidebar Secrets → 全局 | until deleted, stored on disk |
+| Project | sidebar Secrets → 项目 | until deleted, stored on disk |
 | Session | conversation tab | stored on disk; unusable after the session is disposed, metadata is not cleaned up automatically |
 | Auto | detected in the conversation | process memory only (default ≤16 per session) |
 
@@ -132,7 +134,7 @@ npm install   # test dependencies only (React / happy-dom)
 npm test
 ```
 
-137 tests (host logic + UI smoke), no runtime dependencies, no build step. `client.js` is loaded as-is by the Harness web UI. The host suite runs without installing anything: `node --test test/*.test.js`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+139 tests (host logic + UI smoke), no runtime dependencies, no build step. `client.js` is loaded as-is by the Harness web UI. The host suite runs without installing anything: `node --test test/*.test.js`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

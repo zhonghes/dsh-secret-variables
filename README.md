@@ -18,15 +18,17 @@ DeepSeek Harness 插件：让密钥不出现在模型的上下文里。
 
 ## 界面入口
 
-<a href="docs/images/entry.png"><img src="docs/images/entry.png" width="860" alt="示意图：同一界面上的三个入口——侧栏「密钥管理」、工作区行「⋯」菜单、会话标签页，分别对应全局、本项目、本会话"></a>
-
-三处打开的是同一套面板，作用域不同：侧栏改全局，工作区行管本项目，会话标签只作用于当前会话。侧栏入口在「自动化任务」下方。
+两个入口，各自独立：侧栏「密钥管理」是**全局 / 项目**入口（页内再切「项目」仍在这个入口里）；会话标签页是**会话**入口，只作用于当前会话。两者不合并；工作区行「⋯」里原来的密钥入口已并入侧栏页。侧栏入口在「自动化任务」下方。
 
 以下配图都是示意图，变量名与数值仅用于展示。
 
+<a href="docs/images/entry.png"><img src="docs/images/entry.png" width="860" alt="示意图：两个独立入口——左侧全局 / 项目（侧栏「密钥管理」页），右侧会话（会话标签页）"></a>
+
 ### 全局页
 
-<a href="docs/images/global.png"><img src="docs/images/global.png" width="860" alt="示意图：全局页，标题右侧是已启用数量，下面是添加行与变量列表"></a>
+<a href="docs/images/global.png"><img src="docs/images/global.png" width="860" alt="示意图：全局页，标题下方是「全局 / 项目」标签，下面是添加行与变量列表"></a>
+
+全局页与项目页共用标题和标签：标题右侧是刷新，标题下方是 `全局 | 项目` 标签行，当前作用域带下划线。
 
 标题右侧是「已启用 x / y」。添加行依次是名称、值、生效范围、「创建后启用」和「添加」；「创建后启用」默认不勾选，项目页和会话页的同类开关默认勾选。
 
@@ -44,13 +46,13 @@ DeepSeek Harness 插件：让密钥不出现在模型的上下文里。
 
 名称会自动归一化：转大写、非字母数字转下划线、去掉首尾下划线、最长 40 字符——`openai-api-key` 与 `OPENAI_API_KEY` 都会得到 `OPENAI_API_KEY`；纯非拉丁文字的名称落为 `SECRET_<8 位哈希>`。环境变量名在前面加 `DSH_SECRET_`。重名按归一化结果判断，所以 `a`、`A`、`a!` 视为同名。
 
-行内徽标（在「状态」列）：`输出自动脱敏` = 值长度 ≥12，输出里自动替换（绿色）；`输出强制脱敏` = 变量开了强制脱敏且值 ≥4（黄色）；`输出未脱敏` = 值太短，<12 或强制时 <4（红色）。注入始终不受影响。值未设置时这一列显示 `未设置`；`已设置` 只出现在自动检测行——这些条目没有元数据行，界面只能确认值在本次进程内存里。
+行内徽标（在「状态」列）：`输出自动脱敏` = 值长度 ≥12 且未开强制脱敏，输出里自动替换（绿色）；`输出强制脱敏` = 变量开了强制脱敏且值 ≥4（黄色）；`输出未脱敏` = 值太短，<12 或强制时 <4（红色）。注入始终不受影响。值未设置时这一列显示 `未设置`；`已设置` 只出现在自动检测行——这些条目没有元数据行，界面只能确认值在本次进程内存里。
 
-### 项目页（工作区行「⋯」→ 密钥管理）
+### 项目页（侧栏「密钥管理」→ 项目）
 
-<a href="docs/images/project.png"><img src="docs/images/project.png" width="860" alt="示意图：项目弹窗，标题下方显示项目名，分「本项目变量」与「全局变量」两组"></a>
+<a href="docs/images/project.png"><img src="docs/images/project.png" width="860" alt="示意图：项目页，工作区下拉，以及「本项目变量 / 全局变量」两组"></a>
 
-弹窗标题下方显示项目名。本项目变量可直接改值、删除；全局变量只显示开关和「请在所属页修改」。本项目变量与全局变量同名且两者都启用时，全局那条会标为「被覆盖」。
+标题下方切到「项目」标签后，页面上方是工作区下拉；选定项目后显示本项目变量与该项目的全局变量。本项目变量可直接改值、删除；全局变量只显示开关和「请在所属页修改」。本项目变量与全局变量同名且两者都启用时，全局那条会标为「被覆盖」。
 
 ### 会话页（对话 | 轨迹 | 密钥管理）
 
@@ -91,12 +93,12 @@ curl -s -H "Authorization: Bearer $DSH_SECRET_OPENAI_API_KEY" https://api.exampl
 | 格式 | 例子 |
 | --- | --- |
 | PEM 私钥 | `-----BEGIN … PRIVATE KEY-----` |
-| URL 内嵌密码 | `postgres://user:pass@host` |
+| URL 内嵌密码 | `user:password@host` |
 | OpenAI 风格 key | `sk-…`（`sk-` 后至少 20 位且整体含数字） |
 | Google API key | `AIza…` |
 | GitHub token / PAT | `ghp_…` / `github_pat_…` |
 | GitLab / npm / HuggingFace | `glpat-…` / `npm_…` / `hf_…` |
-| AWS / 阿里云 / 腾讯云 | `AKIA…` / `LTAI…` / `AKID…` |
+| AWS / 阿里云 / 腾讯云 | `AKIA…` / `ASIA…` / `LTAI…` / `AKID…` |
 | Slack / Stripe / Webhook | `xoxb-…` / `sk_live_…` / `whsec_…` |
 | JWT | `eyJ….eyJ….…` |
 
@@ -112,8 +114,8 @@ curl -s -H "Authorization: Bearer $DSH_SECRET_OPENAI_API_KEY" https://api.exampl
 
 | 作用域 | 入口 | 生命周期 |
 | --- | --- | --- |
-| 全局 | 侧栏「密钥管理」 | 删除前一直有效，落盘 |
-| 项目 | 工作区行「⋯」 | 删除前一直有效，落盘 |
+| 全局 | 侧栏「密钥管理」→ 全局 | 删除前一直有效，落盘 |
+| 项目 | 侧栏「密钥管理」→ 项目 | 删除前一直有效，落盘 |
 | 会话 | 会话标签页 | 落盘；会话销毁后不再可用，元数据不会自动清理 |
 | 自动 | 对话中识别 | 仅进程内存（每会话默认 ≤16 条） |
 
@@ -130,7 +132,7 @@ npm install   # 只装测试依赖（React / happy-dom）
 npm test
 ```
 
-137 个测试（Host 逻辑 + UI 冒烟），运行时零依赖，无构建步骤；`client.js` 由 Harness Web 直接加载。只跑 Host 测试可以不装依赖：`node --test test/*.test.js`。见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+139 个测试（Host 逻辑 + UI 冒烟），运行时零依赖，无构建步骤；`client.js` 由 Harness Web 直接加载。只跑 Host 测试可以不装依赖：`node --test test/*.test.js`。见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 许可证
 

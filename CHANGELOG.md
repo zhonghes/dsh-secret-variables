@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — 2026
+
+- The global and project scopes now share one sidebar page: switch with
+  **全局 | 项目** tabs below the title; the active scope is underlined.
+- The project scope renders inline with a workspace picker instead of a dialog.
+  The workspace row "⋯" context-menu entry and its overlay dialog are gone.
+- The project page keeps the project/global groups, the same add row and the
+  overridden marker; the session tab is unchanged.
+- Docs and diagrams: README updated; all five diagrams redrawn for the merged
+  page (flow, entry, global, project, session), with SVG sources beside the PNGs.
+- 139 tests.
+
 ## 0.2.1 — 2026
 
 - Same-name definitions now resolve to the most specific **enabled** one:

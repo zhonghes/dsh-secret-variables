@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="850" viewBox="0 0 1800 850">
+  <rect width="1800" height="850" fill="#ffffff"/>
+
+  <!-- entry 1: global (sidebar page) -->
+  <rect x="60" y="60" width="830" height="690" rx="12" fill="#ffffff" stroke="#d7dbe2" stroke-width="2"/>
+  <circle cx="112" cy="120" r="17" fill="#3366ff"/>
+  <text x="112" y="128" font-family="Noto Sans SC, sans-serif" font-size="21" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="140" y="134" font-family="Noto Sans SC, sans-serif" font-size="38" font-weight="700" fill="#23262b">全局 / 项目</text>
+  <text x="112" y="178" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af">侧栏「密钥管理」</text>
+
+  <rect x="100" y="210" width="300" height="450" rx="10" fill="#f7f8fa" stroke="#e3e6ea"/>
+  <text x="122" y="258" font-family="Noto Sans SC, sans-serif" font-size="20" fill="#6b7280">插件</text>
+  <text x="122" y="298" font-family="Noto Sans SC, sans-serif" font-size="20" fill="#6b7280">自动化任务</text>
+  <rect x="112" y="316" width="276" height="54" rx="8" fill="#e9efff" stroke="#3366ff" stroke-width="2"/>
+  <text x="132" y="350" font-family="Noto Sans SC, sans-serif" font-size="24" font-weight="600" fill="#2f5bd7">密钥管理</text>
+  <text x="122" y="412" font-family="Noto Sans SC, sans-serif" font-size="20" fill="#6b7280">更多</text>
+  <text x="122" y="472" font-family="Noto Sans SC, sans-serif" font-size="18" fill="#9ca3af">工作区</text>
+  <text x="122" y="508" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#23262b">dsh</text>
+  <text x="122" y="558" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#23262b">tmp</text>
+
+  <line x1="420" y1="420" x2="492" y2="420" stroke="#23262b" stroke-width="3"/>
+  <path d="M480 410l18 10-18 10z" fill="#23262b"/>
+  <text x="456" y="396" font-family="Noto Sans SC, sans-serif" font-size="20" fill="#6b7280" text-anchor="middle">打开</text>
+
+  <rect x="510" y="210" width="340" height="450" rx="10" fill="#ffffff" stroke="#e3e6ea"/>
+  <text x="530" y="270" font-family="Noto Sans SC, sans-serif" font-size="26" font-weight="700" fill="#23262b">密钥管理</text>
+  <rect x="672" y="246" width="118" height="30" rx="5" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="731" y="267" font-family="Noto Sans SC, sans-serif" font-size="18" fill="#6b7280" text-anchor="middle">已启用 2 / 5</text>
+  <text x="530" y="332" font-family="Noto Sans SC, sans-serif" font-size="22" font-weight="600" fill="#23262b">全局</text>
+  <rect x="530" y="340" width="44" height="3" fill="#3366ff"/>
+  <text x="598" y="332" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#7a8089">项目</text>
+  <line x1="530" y1="344" x2="820" y2="344" stroke="#e3e6ea" stroke-width="2"/>
+
+  <rect x="530" y="364" width="300" height="266" rx="8" fill="#fbfcfd" stroke="#dfe3e8"/>
+  <rect x="550" y="392" width="130" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="700" y="392" width="70" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="770" y="386" width="38" height="22" rx="11" fill="#3366ff"/>
+  <circle cx="798" cy="397" r="8" fill="#ffffff"/>
+  <rect x="550" y="448" width="110" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="680" y="448" width="90" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="770" y="442" width="38" height="22" rx="11" fill="#e5e7eb"/>
+  <circle cx="782" cy="453" r="8" fill="#ffffff"/>
+  <rect x="550" y="504" width="140" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="710" y="504" width="60" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="770" y="498" width="38" height="22" rx="11" fill="#3366ff"/>
+  <circle cx="798" cy="509" r="8" fill="#ffffff"/>
+  <rect x="550" y="560" width="120" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="690" y="560" width="80" height="12" rx="6" fill="#e8eaee"/>
+  <rect x="770" y="554" width="38" height="22" rx="11" fill="#e5e7eb"/>
+  <circle cx="782" cy="565" r="8" fill="#ffffff"/>
+
+  <text x="112" y="706" font-family="Noto Sans SC, sans-serif" font-size="21" fill="#6b7280">侧栏入口打开同一页，页内用「全局 / 项目」标签切换。</text>
+
+  <!-- entry 2: session (conversation tab) -->
+  <rect x="910" y="60" width="830" height="690" rx="12" fill="#ffffff" stroke="#d7dbe2" stroke-width="2"/>
+  <circle cx="962" cy="120" r="17" fill="#3366ff"/>
+  <text x="962" y="128" font-family="Noto Sans SC, sans-serif" font-size="21" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="990" y="134" font-family="Noto Sans SC, sans-serif" font-size="38" font-weight="700" fill="#23262b">会话</text>
+  <text x="962" y="178" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af">会话标签页</text>
+
+  <text x="962" y="270" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af">对话</text>
+  <text x="1032" y="270" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#9ca3af">轨迹</text>
+  <rect x="1102" y="230" width="214" height="52" rx="8" fill="#e9efff" stroke="#3366ff" stroke-width="2"/>
+  <text x="1122" y="264" font-family="Noto Sans SC, sans-serif" font-size="24" font-weight="600" fill="#2f5bd7">密钥管理</text>
+  <line x1="950" y1="302" x2="1700" y2="302" stroke="#e3e6ea" stroke-width="2"/>
+
+  <rect x="950" y="330" width="750" height="300" rx="10" fill="#ffffff" stroke="#e3e6ea"/>
+  <line x1="950" y1="405" x2="1700" y2="405" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="950" y1="480" x2="1700" y2="480" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="950" y1="555" x2="1700" y2="555" stroke="#e3e6ea" stroke-width="2"/>
+
+  <text x="975" y="377" font-family="Noto Sans SC, sans-serif" font-size="24" font-weight="700" fill="#23262b">本会话变量</text>
+  <rect x="1140" y="354" width="38" height="30" rx="5" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1159" y="376" font-family="Noto Sans SC, sans-serif" font-size="18" fill="#6b7280" text-anchor="middle">1</text>
+  <text x="1700" y="377" font-family="Noto Sans SC, sans-serif" font-size="19" fill="#9ca3af" text-anchor="end">仅本会话可用</text>
+
+  <text x="975" y="452" font-family="Noto Sans SC, sans-serif" font-size="24" font-weight="700" fill="#23262b">本项目变量</text>
+  <rect x="1140" y="429" width="38" height="30" rx="5" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1159" y="451" font-family="Noto Sans SC, sans-serif" font-size="18" fill="#6b7280" text-anchor="middle">1</text>
+  <text x="1700" y="452" font-family="Noto Sans SC, sans-serif" font-size="19" fill="#9ca3af" text-anchor="end">本项目内共享</text>
+
+  <text x="975" y="527" font-family="Noto Sans SC, sans-serif" font-size="24" font-weight="700" fill="#23262b">全局变量</text>
+  <rect x="1092" y="504" width="38" height="30" rx="5" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1111" y="526" font-family="Noto Sans SC, sans-serif" font-size="18" fill="#6b7280" text-anchor="middle">5</text>
+  <text x="1700" y="527" font-family="Noto Sans SC, sans-serif" font-size="19" fill="#9ca3af" text-anchor="end">所有项目可用</text>
+
+  <text x="975" y="602" font-family="Noto Sans SC, sans-serif" font-size="24" font-weight="700" fill="#23262b">自动检测</text>
+  <rect x="1092" y="579" width="38" height="30" rx="5" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1111" y="601" font-family="Noto Sans SC, sans-serif" font-size="18" fill="#6b7280" text-anchor="middle">1</text>
+  <text x="1700" y="602" font-family="Noto Sans SC, sans-serif" font-size="19" fill="#9ca3af" text-anchor="end">仅本次会话</text>
+
+  <text x="962" y="706" font-family="Noto Sans SC, sans-serif" font-size="21" fill="#6b7280">只作用于当前会话，和侧栏页不是同一块。</text>
+
+  <text x="90" y="812" font-family="Noto Sans SC, sans-serif" font-size="25" fill="#4b5563">两个入口各开各的：全局 / 项目（侧栏页）与会话（会话标签页），不合并。</text>
+</svg>

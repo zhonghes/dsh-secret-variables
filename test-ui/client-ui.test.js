@@ -195,45 +195,65 @@ test('T-UI2 turning the session definition off falls back to the project definit
   assert.equal((await service.envOverlay('s1')).DSH_SECRET_SHARED, 'project-value')
 })
 
-test('T-UI3 the project dialog marks and disables the overridden global row', async (t) => {
+async function openProjectPage(t, payload) {
   serve(async (target) => {
-    if (target.includes('op=workspace&')) return workspacePayload(true)
     if (target.includes('op=workspaces')) return { workspaces: [{ id: 'w1', title: 'dsh' }] }
+    if (target.includes('op=workspace&')) return payload
+    if (target.includes('op=globals')) return { globals: [] }
     return {}
   })
-  const overlay = components['shell.overlay#secret-variables.workspace']
-  const cleanup = await mount(overlay.comp, overlay.def.inject())
-  t.after(cleanup)
-  await wait(200)
-  menu.resolve({ workspaceId: 'w1', displayTitle: 'dsh' })[0].run()
-  await wait(400)
+  const main = components.main
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  t.after(async () => { root.unmount(); container.remove() })
+  root.render(React.createElement(main.comp, main.def.inject()))
+  await wait(300)
+  Simulate.click(container.querySelector('button[data-scope="project"]'))
+  await wait(500)
+  return container
+}
 
-  const dialog = document.body.querySelector('div[role="dialog"]')
-  assert.ok(dialog, 'dialog opened')
-  const badges = spansOf(dialog, 'field.overridden')
+test('T-UI3 the project page marks and disables the overridden global row', async (t) => {
+  const container = await openProjectPage(t, workspacePayload(true))
+  assert.equal(container.querySelector('select[aria-label="field.workspace"]').value, 'w1')
+  const badges = spansOf(container, 'field.overridden')
   assert.equal(badges.length, 1)
   const globalRow = badges[0].parentElement
   assert.equal(globalRow.style.opacity, '0.6')
   assert.equal(globalRow.querySelector('button[role="switch"]').disabled, true)
-  const projectRow = rowOf(dialog, 'source.workspace')
+  const projectRow = rowOf(container, 'source.workspace')
   assert.equal(projectRow.querySelector('button[role="switch"]').disabled, false)
 })
 
-test('T-UI4 the project dialog leaves the global row unmarked without an override', async (t) => {
+test('T-UI4 the project page leaves the global row unmarked without an override', async (t) => {
+  const container = await openProjectPage(t, workspacePayload(false))
+  assert.equal(spansOf(container, 'field.overridden').length, 0)
+  assert.equal(rowsOf(container).every((row) => row.querySelector('button[role="switch"]').disabled === false), true)
+})
+
+test('T-UI5 the page starts on global and switches to the project scope', async (t) => {
+  assert.equal(menu, null, 'no workspace context-menu entry')
   serve(async (target) => {
-    if (target.includes('op=workspace&')) return workspacePayload(false)
     if (target.includes('op=workspaces')) return { workspaces: [{ id: 'w1', title: 'dsh' }] }
+    if (target.includes('op=globals')) return { globals: [] }
+    if (target.includes('op=workspace&')) return workspacePayload(false)
     return {}
   })
-  const overlay = components['shell.overlay#secret-variables.workspace']
-  const cleanup = await mount(overlay.comp, overlay.def.inject())
-  t.after(cleanup)
-  await wait(200)
-  menu.resolve({ workspaceId: 'w1', displayTitle: 'dsh' })[0].run()
-  await wait(400)
+  const main = components.main
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+  t.after(async () => { root.unmount(); container.remove() })
+  root.render(React.createElement(main.comp, main.def.inject()))
+  await wait(300)
 
-  const dialog = document.body.querySelector('div[role="dialog"]')
-  assert.ok(dialog, 'dialog opened')
-  assert.equal(spansOf(dialog, 'field.overridden').length, 0)
-  assert.equal(rowsOf(dialog).every((row) => row.querySelector('button[role="switch"]').disabled === false), true)
+  assert.equal(container.querySelector('button[data-scope="global"]').getAttribute('aria-selected'), 'true')
+  assert.ok(container.querySelector('input[placeholder="OPENAI_API_KEY"]'), 'global add form')
+  assert.equal(container.querySelector('select[aria-label="field.workspace"]'), null)
+
+  Simulate.click(container.querySelector('button[data-scope="project"]'))
+  await wait(500)
+  assert.equal(container.querySelector('button[data-scope="project"]').getAttribute('aria-selected'), 'true')
+  assert.ok(container.querySelector('select[aria-label="field.workspace"]'), 'project workspace picker')
 })

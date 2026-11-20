@@ -1,8 +1,8 @@
 /**
- * Browser half: the Secrets panel (global scope), the workspace menu entry, the
- * session View tab, and their dialogs. Everything renders through slots with
- * plain React and theme tokens; values are written through the shipped
- * credential Remote and are never read back.
+ * Browser half: the Secrets panel (global and project scopes behind one
+ * 全局 | 项目 switch) and the session View tab. Everything renders through
+ * slots with plain React and theme tokens; values are written through the
+ * shipped credential Remote and are never read back.
  */
 window.__ModuleLoader__.load({
   id: '@local/dsh-secret-variables',
@@ -51,6 +51,8 @@ window.__ModuleLoader__.load({
         'action.clearValue': '清除',
         'action.refresh': '刷新',
         'field.name': '名称',
+        'field.scope': '作用域',
+        'field.workspace': '工作区',
         'field.value': '值',
         'field.availability': '生效范围',
         'field.allProjects': '全部项目',
@@ -117,6 +119,8 @@ window.__ModuleLoader__.load({
         'action.clearValue': 'Clear',
         'action.refresh': 'Refresh',
         'field.name': 'Name',
+        'field.scope': 'Scope',
+        'field.workspace': 'Workspace',
         'field.value': 'Value',
         'field.availability': 'Availability',
         'field.allProjects': 'All projects',
@@ -196,6 +200,17 @@ window.__ModuleLoader__.load({
       inlineLabel: { fontSize: 12, color: COLOR.secondary, lineHeight: '16px', whiteSpace: 'nowrap', flex: 'none' },
       check: { display: 'flex', alignItems: 'center', gap: 6, height: CONTROL, fontSize: 13, color: COLOR.text, whiteSpace: 'nowrap' },
       addRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, margin: '0 0 16px' },
+      tabsBar: { display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 10, margin: '14px 0 12px', borderBottom: `1px solid ${COLOR.border}` },
+      tabs: { display: 'flex', flex: '1 1 auto', minWidth: 0, gap: 4 },
+      tab: { border: 'none', background: 'transparent', color: COLOR.secondary, fontFamily: 'inherit', fontSize: 13, padding: '8px 12px', cursor: 'pointer', borderBottom: '2px solid transparent' },
+      tabActive: { color: COLOR.text, borderBottom: `2px solid ${COLOR.accent}` },
+      scopeRow: { display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 14px', flexWrap: 'wrap' },
+      workspaceInline: { display: 'flex', alignItems: 'center', gap: 8, flex: 'none' },
+      scopeLabel: { fontSize: 12, color: COLOR.secondary },
+      scopeSelect: {
+        height: CONTROL, width: 190, padding: '0 8px', borderRadius: 8, border: `1px solid ${COLOR.border}`,
+        background: COLOR.base, color: COLOR.text, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box',
+      },
       card: { border: `1px solid ${COLOR.border}`, borderRadius: 12, overflow: 'hidden', background: COLOR.layer },
       row: {
         display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 84px 104px 40px 176px', columnGap: 12,
@@ -233,26 +248,6 @@ window.__ModuleLoader__.load({
         background: on ? COLOR.accent : COLOR.border, transition: 'background 120ms ease', flex: 'none', justifySelf: 'center',
       }),
       knob: (on) => ({ position: 'absolute', top: 2, left: on ? 18 : 2, width: 14, height: 14, borderRadius: 999, background: '#fff', transition: 'left 120ms ease' }),
-    }
-
-    function createStore(initial) {
-      let value = initial
-      const listeners = new Set()
-      return {
-        getSnapshot: () => value,
-        subscribe: (listener) => {
-          listeners.add(listener)
-          return () => listeners.delete(listener)
-        },
-        set(next) {
-          value = typeof next === 'function' ? next(value) : next
-          for (const listener of [...listeners]) listener()
-        },
-      }
-    }
-
-    function useStore(store) {
-      return React.useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
     }
 
     async function request(path, init) {
@@ -675,11 +670,77 @@ window.__ModuleLoader__.load({
         onRefresh === undefined ? null : h(IconButton, { onClick: onRefresh, title: t('action.refresh') }, '↻'))
     }
 
-    // ---------------------------------------------------------------- panel
-    function GlobalPanel(props) {
-      const { t, remote } = props
-      const { data: directory } = useRemote(() => request('?op=workspaces'), [])
+    /** Content tabs: 全局 | 项目, matching the shipped tab strip (skills | MCP). */
+    function ScopeTabs({ t, scope, onChange }) {
+      const button = (value, label) => h('button', {
+        type: 'button',
+        role: 'tab',
+        'data-scope': value,
+        'aria-selected': scope === value,
+        onClick: () => onChange(value),
+        style: { ...S.tab, ...(scope === value ? S.tabActive : {}) },
+      }, label)
+      return h('div', { style: S.tabsBar },
+        h('div', { style: S.tabs, role: 'tablist', 'aria-label': t('field.scope') },
+          button('global', t('source.global')),
+          button('project', t('source.workspace'))))
+    }
+
+    /** Remember the last project across visits, like the skills panel does. */
+    const WORKSPACE_STORAGE = 'secret-variables:workspace'
+    function rememberedWorkspace() {
+      try {
+        return window.localStorage.getItem(WORKSPACE_STORAGE)
+      } catch {
+        return null
+      }
+    }
+    function rememberWorkspace(id) {
+      try {
+        window.localStorage.setItem(WORKSPACE_STORAGE, id)
+      } catch {
+        // Storage is optional; the in-memory selection still works.
+      }
+    }
+
+    // ------------------------------------------------------------------ panel
+    function SecretsPage({ t, remote }) {
+      const [scope, setScope] = React.useState('global')
+      const [workspaceId, setWorkspaceId] = React.useState(null)
+      const { data: directory, reload: reloadDirectory } = useRemote(() => request('?op=workspaces'), [])
       const workspaces = Array.isArray(directory?.workspaces) ? directory.workspaces : []
+
+      React.useEffect(() => {
+        if (scope !== 'project') return
+        if (workspaces.length === 0) {
+          if (workspaceId !== null) setWorkspaceId(null)
+          return
+        }
+        if (workspaceId !== null && workspaces.some((workspace) => workspace.id === workspaceId)) return
+        const remembered = rememberedWorkspace()
+        setWorkspaceId(workspaces.find((workspace) => workspace.id === remembered)?.id ?? workspaces[0].id)
+      }, [scope, workspaces, workspaceId])
+
+      const changeWorkspace = (next) => {
+        setWorkspaceId(next)
+        rememberWorkspace(next)
+      }
+      const tabs = h(ScopeTabs, { t, scope, onChange: setScope })
+      return scope === 'global'
+        ? h(GlobalPanel, { t, remote, workspaces, tabs, onReloadWorkspaces: reloadDirectory })
+        : h(ProjectPanel, {
+          t,
+          remote,
+          workspaces,
+          workspaceId,
+          onWorkspace: changeWorkspace,
+          tabs,
+          onReloadWorkspaces: reloadDirectory,
+        })
+    }
+
+    // ---------------------------------------------------------------- global
+    function GlobalPanel({ t, remote, workspaces = [], tabs, onReloadWorkspaces }) {
       const { data, error, reload } = useRemote(() => request('?op=globals'), [])
       const [name, setName] = React.useState('')
       const [value, setValue] = React.useState('')
@@ -750,7 +811,16 @@ window.__ModuleLoader__.load({
       const globals = data?.globals ?? []
       const enabledCount = globals.filter((global) => global.enabledByDefault).length
       return h(Page, null,
-        h(PageHeader, { t, title: t('panel.title'), summary: fill(t('count.enabled'), { enabled: enabledCount, total: globals.length }), onRefresh: reload }),
+        h(PageHeader, {
+          t,
+          title: t('panel.title'),
+          summary: fill(t('count.enabled'), { enabled: enabledCount, total: globals.length }),
+          onRefresh: () => {
+            reload()
+            onReloadWorkspaces?.()
+          },
+        }),
+        tabs,
         h('p', { style: S.subtitle }, t('notice.values')),
         h('div', { style: S.addRow },
           h('label', { style: S.inlineField },
@@ -814,10 +884,8 @@ window.__ModuleLoader__.load({
         h('p', { style: S.notice }, t('notice.onlyShell')))
     }
 
-    // ------------------------------------------------------------- workspace
-    function WorkspaceDialog({ t, remote, dialog }) {
-      const state = useStore(dialog)
-      const workspaceId = state.workspaceId
+    // -------------------------------------------------------------- project
+    function ProjectPanel({ t, remote, workspaces = [], workspaceId, onWorkspace, tabs, onReloadWorkspaces }) {
       const { data, error, reload } = useRemote(
         () => (workspaceId === null ? Promise.resolve(null) : request(`?op=workspace&workspaceId=${encodeURIComponent(workspaceId)}`)),
         [workspaceId],
@@ -827,7 +895,6 @@ window.__ModuleLoader__.load({
       const [enabledOn, setEnabledOn] = React.useState(true)
       const [failure, setFailure] = React.useState(null)
       const [shortGate, setShortGate] = React.useState(null)
-      const close = React.useCallback(() => dialog.set({ open: false, workspaceId: null, title: '' }), [dialog])
 
       const add = async (mode = 'normal') => {
         setFailure(null)
@@ -885,65 +952,94 @@ window.__ModuleLoader__.load({
       const groups = PROJECT_GROUPS
         .map((source) => ({ source, rows: source === 'workspace' ? workspaceRows : globalRows }))
         .filter((group) => group.rows.length > 0)
+      const rows = [...(data?.globals ?? []), ...(data?.variables ?? [])]
+      const enabledCount = rows.filter((row) => row.effective === true && row.overridden !== true).length
+      const refresh = () => {
+        reload()
+        onReloadWorkspaces?.()
+      }
 
-      return h(Dialog, { open: state.open, title: `${t('panel.title')} · ${t('source.workspace')}`, onClose: close, wide: true },
-        h('p', { style: S.subtitle }, state.title ?? ''),
-        h('div', { style: S.addRow },
-          h('label', { style: S.inlineField },
-            h('span', { style: S.inlineLabel }, t('field.name')),
-            h('input', {
-              value: name,
-              onChange: (event) => setName(event.target.value),
-              placeholder: 'PROJECT_TOKEN',
-              style: { ...S.input, width: 150, flex: 'none' },
-            })),
-          h('label', { style: S.inlineField },
-            h('span', { style: S.inlineLabel }, t('field.value')),
-            h('input', {
-              type: 'password',
-              autoComplete: 'off',
-              value,
-              onChange: (event) => { setValue(event.target.value); setShortGate(null) },
-              style: { ...S.input, flex: '1 1 140px', width: 'auto', minWidth: 120, maxWidth: 240 },
-            })),
-          h('label', { style: S.check }, h('input', { type: 'checkbox', checked: enabledOn, onChange: (event) => setEnabledOn(event.target.checked) }), t('field.enabled')),
-          h(Button, { primary: true, disabled: name.trim().length === 0, onClick: () => add() }, t('action.add'))),
-        shortGate === null ? null : h(ShortValueDialog, {
+      return h(Page, null,
+        h(PageHeader, {
           t,
-          length: shortGate.length,
-          scope: 'add',
-          onClose: () => setShortGate(null),
-          onAnyway: () => add('anyway'),
-          onForce: () => add('force'),
+          title: t('panel.title'),
+          summary: data === null ? undefined : fill(t('count.enabled'), { enabled: enabledCount, total: rows.length }),
+          onRefresh: refresh,
         }),
-        h(ErrorLine, null, failure),
-        h(ErrorLine, null, error === null ? null : `${t('error.load')}: ${error}`),
-        h('div', { style: S.card },
-          groups.length === 0
-            ? h('div', { style: S.empty }, t('empty.workspace'))
-            : groups.map((group, index) => h(React.Fragment, { key: group.source },
-              h('div', { style: index === 0 ? { ...S.group, borderTop: 'none' } : S.group },
-                h('span', { style: S.groupTitle }, t('group.' + group.source)),
-                h('span', { style: S.badge }, String(group.rows.length)),
-                h('div', { style: { flex: 1 } }),
-                h('span', { style: S.groupHint }, t('group.' + group.source + '.hint'))),
-              group.rows.map((row) => h(SecretRow, {
-                key: row.item.id,
-                t,
-                remote,
-                item: row.item,
-                checked: row.checked,
-                onToggle: row.toggle,
-                onDelete: row.remove,
-                onForceRedact: row.setForce,
-                onChanged: reload,
-                canDelete: row.remove !== undefined,
-                canEditValue: row.item.source === 'workspace',
-                overridden: row.overridden === true,
-                toggleDisabled: row.overridden === true,
-              }))))),
-        h('p', { style: S.notice }, t('notice.inherited.project')),
-        h('p', { style: S.notice }, t('notice.values')))
+        tabs,
+        h('div', { style: S.scopeRow },
+          h('div', { style: S.workspaceInline },
+            h('span', { style: S.scopeLabel }, t('field.workspace')),
+            workspaces.length === 0
+              ? h('span', { style: S.scopeLabel }, t('scope.noProjects'))
+              : h('select', {
+                value: workspaceId ?? '',
+                'aria-label': t('field.workspace'),
+                onChange: (event) => onWorkspace(event.target.value),
+                style: S.scopeSelect,
+              }, workspaces.map((workspace) => h('option', {
+                key: workspace.id,
+                value: workspace.id,
+              }, workspace.title ?? workspace.path ?? workspace.id))))),
+        workspaces.length === 0 || workspaceId === null
+          ? null
+          : h(React.Fragment, null,
+            h('div', { style: S.addRow },
+              h('label', { style: S.inlineField },
+                h('span', { style: S.inlineLabel }, t('field.name')),
+                h('input', {
+                  value: name,
+                  onChange: (event) => setName(event.target.value),
+                  placeholder: 'PROJECT_TOKEN',
+                  style: { ...S.input, width: 150, flex: 'none' },
+                })),
+              h('label', { style: S.inlineField },
+                h('span', { style: S.inlineLabel }, t('field.value')),
+                h('input', {
+                  type: 'password',
+                  autoComplete: 'off',
+                  value,
+                  onChange: (event) => { setValue(event.target.value); setShortGate(null) },
+                  style: { ...S.input, flex: '1 1 140px', width: 'auto', minWidth: 120, maxWidth: 240 },
+                })),
+              h('label', { style: S.check }, h('input', { type: 'checkbox', checked: enabledOn, onChange: (event) => setEnabledOn(event.target.checked) }), t('field.enabled')),
+              h(Button, { primary: true, disabled: name.trim().length === 0, onClick: () => add() }, t('action.add'))),
+            shortGate === null ? null : h(ShortValueDialog, {
+              t,
+              length: shortGate.length,
+              scope: 'add',
+              onClose: () => setShortGate(null),
+              onAnyway: () => add('anyway'),
+              onForce: () => add('force'),
+            }),
+            h(ErrorLine, null, failure),
+            h(ErrorLine, null, error === null ? null : `${t('error.load')}: ${error}`),
+            h('div', { style: S.card },
+              groups.length === 0
+                ? h('div', { style: S.empty }, t('empty.workspace'))
+                : groups.map((group, index) => h(React.Fragment, { key: group.source },
+                  h('div', { style: index === 0 ? { ...S.group, borderTop: 'none' } : S.group },
+                    h('span', { style: S.groupTitle }, t('group.' + group.source)),
+                    h('span', { style: S.badge }, String(group.rows.length)),
+                    h('div', { style: { flex: 1 } }),
+                    h('span', { style: S.groupHint }, t('group.' + group.source + '.hint'))),
+                  group.rows.map((row) => h(SecretRow, {
+                    key: row.item.id,
+                    t,
+                    remote,
+                    item: row.item,
+                    checked: row.checked,
+                    onToggle: row.toggle,
+                    onDelete: row.remove,
+                    onForceRedact: row.setForce,
+                    onChanged: reload,
+                    canDelete: row.remove !== undefined,
+                    canEditValue: row.item.source === 'workspace',
+                    overridden: row.overridden === true,
+                    toggleDisabled: row.overridden === true,
+                  }))))),
+            h('p', { style: S.notice }, t('notice.inherited.project')),
+            h('p', { style: S.notice }, t('notice.values'))))
     }
 
     const GROUPS = ['session', 'workspace', 'global', 'auto']
@@ -1092,7 +1188,7 @@ window.__ModuleLoader__.load({
     }
 
     const plugin = {
-      inject: ['slots', 'locale', 'contextMenus', 'remote', 'remote.credentials'],
+      inject: ['slots', 'locale', 'remote', 'remote.credentials'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, STRINGS), 'secret-variables: dictionaries')
         const t = ctx.locale.bind(NS)
@@ -1110,7 +1206,7 @@ window.__ModuleLoader__.load({
           key: 'secret-variables',
           locale: NS,
           inject: () => ({ t, remote: ctx.remote }),
-        }, GlobalPanel))
+        }, SecretsPage))
 
         ctx.slots.inject('conversation.view', () => ctx.slots.register({
           name: 'conversation.view',
@@ -1120,32 +1216,6 @@ window.__ModuleLoader__.load({
           label: () => t('view.title'),
           inject: () => ({ t, remote: ctx.remote }),
         }, SessionView))
-
-        const workspaceDialog = createStore({ open: false, workspaceId: null, title: '' })
-        ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-          name: 'shell.overlay',
-          id: 'secret-variables.workspace',
-          order: 500,
-          locale: NS,
-          inject: () => ({ t, remote: ctx.remote, dialog: workspaceDialog }),
-        }, WorkspaceDialog))
-
-        ctx.effect(() => ctx.contextMenus.register({
-          id: 'secret-variables.workspace',
-          target: 'workspace',
-          order: 200,
-          resolve: (target) => [{
-            id: 'secret-variables',
-            label: t('panel.title'),
-            icon: { key: 'secret-variables' },
-            run: () => workspaceDialog.set({ open: true, workspaceId: target.workspaceId, title: target.displayTitle }),
-          }],
-        }), 'secret-variables: workspace menu')
-
-        ctx.slots.inject('contextMenu.icon', () => ctx.slots.register({
-          name: 'contextMenu.icon',
-          key: 'secret-variables',
-        }, Icon))
       },
     }
 

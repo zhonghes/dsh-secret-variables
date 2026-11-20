@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="810" viewBox="0 0 1800 810">
+  <rect width="1800" height="810" fill="#ffffff"/>
+
+  <text x="90" y="122" font-family="Noto Sans SC, sans-serif" font-size="44" font-weight="700" fill="#23262b">密钥管理</text>
+  <rect x="300" y="88" width="174" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="387" y="118" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#6b7280" text-anchor="middle">已启用 2 / 5</text>
+  <g stroke="#7a8089" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1690 104a15 15 0 1 1-5-11"/>
+    <path d="M1690 86v14h-14"/>
+  </g>
+
+  <text x="96" y="198" font-family="Noto Sans SC, sans-serif" font-size="27" font-weight="600" fill="#23262b">全局</text>
+  <rect x="96" y="207" width="54" height="3" fill="#3366ff"/>
+  <text x="182" y="198" font-family="Noto Sans SC, sans-serif" font-size="27" fill="#7a8089">项目</text>
+  <line x1="90" y1="212" x2="1710" y2="212" stroke="#e3e6ea" stroke-width="2"/>
+
+  <text x="90" y="292" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#7a8089">名称</text>
+  <rect x="146" y="258" width="236" height="50" rx="8" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="164" y="291" font-family="JetBrains Mono, monospace" font-size="23" fill="#23262b">OPENAI_API_KEY</text>
+
+  <text x="414" y="292" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#7a8089">值</text>
+  <rect x="452" y="258" width="250" height="50" rx="8" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="472" y="292" font-family="Noto Sans SC, sans-serif" font-size="26" letter-spacing="1" fill="#23262b">••••••••</text>
+
+  <text x="744" y="292" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#7a8089">生效范围</text>
+  <rect x="852" y="258" width="198" height="50" rx="8" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="868" y="291" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#23262b">全部项目</text>
+  <path d="M1022 280l7 8 7-8" fill="none" stroke="#7a8089" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="1088" y="272" width="24" height="24" rx="4" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1124" y="292" font-family="Noto Sans SC, sans-serif" font-size="24" fill="#23262b">创建后启用</text>
+  <rect x="1330" y="258" width="104" height="50" rx="8" fill="#3366ff"/>
+  <text x="1382" y="291" font-family="Noto Sans SC, sans-serif" font-size="25" fill="#ffffff" text-anchor="middle">添加</text>
+
+  <rect x="90" y="350" width="1620" height="340" rx="12" fill="#ffffff" stroke="#d7dbe2"/>
+  <line x1="90" y1="463" x2="1710" y2="463" stroke="#e3e6ea" stroke-width="2"/>
+  <line x1="90" y1="577" x2="1710" y2="577" stroke="#e3e6ea" stroke-width="2"/>
+
+  <text x="120" y="415" font-family="JetBrains Mono, monospace" font-size="27" fill="#23262b">OPENAI_API_KEY</text>
+  <text x="380" y="415" font-family="JetBrains Mono, monospace" font-size="22" fill="#9ca3af">$DSH_SECRET_OPENAI_API_KEY</text>
+  <rect x="960" y="385" width="150" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1035" y="414" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">全部项目</text>
+  <rect x="1130" y="385" width="196" height="44" rx="6" fill="#eafaf0" stroke="#63b881"/>
+  <text x="1228" y="414" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#2f8a52" text-anchor="middle">输出自动脱敏</text>
+  <rect x="1356" y="393" width="56" height="28" rx="14" fill="#3366ff"/>
+  <circle cx="1398" cy="407" r="11" fill="#ffffff"/>
+  <rect x="1440" y="385" width="120" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1500" y="414" font-family="Noto Sans SC, sans-serif" font-size="23" fill="#23262b" text-anchor="middle">更换值</text>
+  <text x="1630" y="416" font-family="Noto Sans SC, sans-serif" font-size="28" fill="#d64545" text-anchor="middle">✕</text>
+
+  <text x="120" y="529" font-family="JetBrains Mono, monospace" font-size="27" fill="#23262b">GITHUB_TOKEN</text>
+  <text x="380" y="529" font-family="JetBrains Mono, monospace" font-size="22" fill="#9ca3af">$DSH_SECRET_GITHUB_TOKEN</text>
+  <rect x="960" y="499" width="150" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1035" y="528" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">dsh、tmp</text>
+  <rect x="1130" y="499" width="196" height="44" rx="6" fill="#eafaf0" stroke="#63b881"/>
+  <text x="1228" y="528" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#2f8a52" text-anchor="middle">输出自动脱敏</text>
+  <rect x="1356" y="507" width="56" height="28" rx="14" fill="#3366ff"/>
+  <circle cx="1398" cy="521" r="11" fill="#ffffff"/>
+  <rect x="1440" y="499" width="120" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1500" y="528" font-family="Noto Sans SC, sans-serif" font-size="23" fill="#23262b" text-anchor="middle">更换值</text>
+  <text x="1630" y="530" font-family="Noto Sans SC, sans-serif" font-size="28" fill="#d64545" text-anchor="middle">✕</text>
+
+  <text x="120" y="642" font-family="JetBrains Mono, monospace" font-size="27" fill="#23262b">SENTRY_DSN</text>
+  <text x="380" y="642" font-family="JetBrains Mono, monospace" font-size="22" fill="#9ca3af">$DSH_SECRET_SENTRY_DSN</text>
+  <rect x="960" y="612" width="150" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1035" y="641" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#6b7280" text-anchor="middle">全部项目</text>
+  <rect x="1130" y="612" width="196" height="44" rx="6" fill="#fff7e8" stroke="#e0a33e"/>
+  <text x="1228" y="641" font-family="Noto Sans SC, sans-serif" font-size="22" fill="#b26b00" text-anchor="middle">输出强制脱敏</text>
+  <rect x="1356" y="620" width="56" height="28" rx="14" fill="#e5e7eb" stroke="#d7dbe2"/>
+  <circle cx="1370" cy="634" r="11" fill="#ffffff"/>
+  <rect x="1440" y="612" width="120" height="44" rx="6" fill="#ffffff" stroke="#cfd4dc"/>
+  <text x="1500" y="641" font-family="Noto Sans SC, sans-serif" font-size="23" fill="#23262b" text-anchor="middle">更换值</text>
+  <text x="1630" y="643" font-family="Noto Sans SC, sans-serif" font-size="28" fill="#d64545" text-anchor="middle">✕</text>
+
+  <text x="90" y="744" font-family="Noto Sans SC, sans-serif" font-size="25" fill="#4b5563">标题下方是「全局 / 项目」标签，当前作用域带下划线；刷新在标题右侧。</text>
+  <text x="90" y="786" font-family="Noto Sans SC, sans-serif" font-size="25" fill="#4b5563">行内从左到右：名称与引用、生效范围、脱敏状态、开关、操作。</text>
+</svg>
